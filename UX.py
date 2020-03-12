@@ -5,7 +5,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
-from diseaseBoard import diseaseBoard
+from DiseaseBoard import DiseaseBoard
 
 DEFAULT_BOARD_SIZE = 50
 DEFAULT_TOUR = 5
@@ -333,7 +333,7 @@ if __name__ == '__main__':
     board_size = 30
     nb_clusters = 3
 
-    db = diseaseBoard(board_size, tours, nb_clusters)
+    db = DiseaseBoard(board_size, tours, nb_clusters)
     db.tauxImmunite = 0.4
     # Entre 2 et 3 personnes contaminées par malade, si on considère qu'à chaque tour (a peu près un jour), on
     # a l'occasion de contaminer environ 15 personnes, et ce pendant la durée de la contamination, considérée comme

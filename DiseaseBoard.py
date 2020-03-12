@@ -13,15 +13,16 @@ STATE = {
     "DECEDE": 4
 }
 
-class diseaseBoard:
+
+class DiseaseBoard:
     def __init__(self, size, tour, nb_clusters):
 
         self._longueur = size
-        self._largeur  = size
+        self._largeur = size
 
         self._nb_clusters = nb_clusters
 
-        self._nb_tour  = tour
+        self._nb_tour = tour
         self._tour_actuel = 0
 
         self._taux_immunite = 0.2
@@ -32,7 +33,7 @@ class diseaseBoard:
         self._delai_contagion = 3
 
         self._delai_quarantaine = 2
-        self._taux_quarantaine  = 0.2
+        self._taux_quarantaine = 0.2
 
         # Par défaut, R0 = 3, et il y a 8 cases adjacentes
         self._proba_transmission = 1 / 8
