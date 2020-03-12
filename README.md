@@ -37,6 +37,7 @@ At the end of each simulation, the user that change the parameters as he likes, 
 ## TODO
 
 - Make the number of rounds, the board size and the number of clusters available for change inside the app.
+- Make it possible to navigate through the spreading step by step, forward and backward.
 
 ## Bugs
 
