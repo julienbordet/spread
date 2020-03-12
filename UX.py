@@ -33,7 +33,7 @@ class Pos(QWidget):
         self.x = x
         self.y = y
 
-    def init(self, state):
+    def redraw(self, state):
         self._state = state
         self.update()
 
@@ -89,12 +89,12 @@ class MainWindow(QMainWindow):
         self.board_size = board_size
 
         self.diseaseBoard = dB
+        self.nb_tours_init = nb_tours
+        self.nb_tours = nb_tours
 
         w = QWidget()
         hb = QHBoxLayout()
 
-        self.nb_tours_init = nb_tours
-        self.nb_tours = nb_tours
         self.nb_toursLabel = QLabel()
         self.nb_toursLabel.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         self.nb_toursLabel.setText("%03d" % self.nb_tours)
@@ -140,19 +140,20 @@ class MainWindow(QMainWindow):
         self.show()
 
     def init_map(self, etat):
+        print(etat)
         # Add positions to the map
         for x in range(0, self.board_size):
             for y in range(0, self.board_size):
                 w = Pos(x, y)
                 self.grid.addWidget(w, x, y)
-                w.init(etat[x,y])
+                w.redraw(etat[x,y])
 
     def update_map(self, etat):
         # Add positions to the map
         for x in range(0, self.board_size):
             for y in range(0, self.board_size):
                 w = self.grid.itemAtPosition(x, y).widget()
-                w.init(etat[x,y])
+                w.redraw(etat[x,y])
 
     def goButton_pressed(self):
         if self.status == STATUS_STOPPED:
@@ -182,10 +183,8 @@ class MainWindow(QMainWindow):
         self.nb_tours = self.nb_tours_init
         self.nb_toursLabel.setText("%03d" % self.nb_tours)
 
-        self.init_map(self.diseaseBoard.dernier_etat())
+        self.update_map(self.diseaseBoard.dernier_etat())
         print("init map done")
-        self.update()
-        print("Updated")
 
     def update_timer(self):
         if self.status == STATUS_PLAYING:
