@@ -34,6 +34,10 @@ Once the GO button has been pushed, the simulation goes on, round by round, and 
 
 At the end of each simulation, the user that change the parameters as he likes, and test the effect on the spreading of the disease, by pressing the "RESET button", to generate a new "Disease Board", then "GO", to launch the simulation.
 
+## TODO
+
+- Make the number of rounds, the board size and the number of clusters available for change inside the app.
+
 ## Bugs
 
 Right now there is a bug on Mac OS Mojave that seems to prevent Qt5 from having a nice display behavior. That may result in pressing the "RESET" button having no visual effect. However, the modelisation effectively starts when pressing the "GO" button. This does not happen on Windows.
