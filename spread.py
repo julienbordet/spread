@@ -20,14 +20,23 @@ STATE = {
 STATUS_PLAYING = 1
 STATUS_STOPPED = 0
 
-CONF_LIGNE_TAUX_IMMUNITE = 0
-CONF_LIGNE_PROBA_TRANSMISSION = 1
-CONF_LIGNE_TAUX_MORTALITE = 2
-CONF_LIGNE_DELAI_MORTALITE = 3
-CONF_LIGNE_DELAI_RETABLISSEMENT = 4
-CONF_LIGNE_TAUX_QUARANTAINE = 5
-CONF_LIGNE_DELAI_QUARANTAINE = 6
+IMMUNITY_RATE_BTN = 0
+TRANSMISSION_RATE_BTN = 1
+MORTALITY_RATE_BTN = 2
+MORTALITY_DELAY_BTN = 3
+CONTAGION_DELAY_BTN = 4
+QUARANTINE_RATE_BTN = 5
+QUARANTINE_DELAY_BTN = 6
 
+btns = {
+    IMMUNITY_RATE_BTN: ("Tx Immunité", "double"),
+    TRANSMISSION_RATE_BTN: ("Tx transmission", "double"),
+    MORTALITY_RATE_BTN: ("Tx mortalité", "double"),
+    MORTALITY_DELAY_BTN: ("Délai mortalité", "int"),
+    CONTAGION_DELAY_BTN: ("Délai transmission", "int"),
+    QUARANTINE_RATE_BTN: ("Tx mise quarantaine", "int"),
+    QUARANTINE_DELAY_BTN: ("Délai mise quarantaine", "int")
+}
 
 class Pos(QWidget):
     expandable = pyqtSignal(int, int)
@@ -85,6 +94,7 @@ class Pos(QWidget):
 class MainWindow(QMainWindow):
     def __init__(self, newboard_size, nb_tours, dB, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
+        self.setWindowTitle("spread : disease spread simple model")
 
         self.qLocale = QLocale()
 
@@ -148,6 +158,9 @@ class MainWindow(QMainWindow):
 
         self.grid = QGridLayout()
         self.grid.setSpacing(1)
+
+        # Nécessaire pour permettre à l'affichage du board de rester compact
+
         gridLayout = QVBoxLayout()
         gridLayout.addStretch(1)
         gridLayout.addLayout(self.grid)
@@ -174,60 +187,35 @@ class MainWindow(QMainWindow):
         confgrid = QGridLayout()
         confgrid.setSpacing(1)
 
-        TI = QLabel("Taux Immunité : ")
-        TIV = QLineEdit(self.qLocale.toString(self.diseaseBoard.tauxImmunite, precision = 2))
-        TIV.setValidator(QDoubleValidator(0.0, 1.0, 2))
-        TIV.setAlignment(Qt.AlignRight)
-        TIV.setFixedWidth(40)
-        confgrid.addWidget(TI, CONF_LIGNE_TAUX_IMMUNITE, 0)
-        confgrid.addWidget(TIV, CONF_LIGNE_TAUX_IMMUNITE, 1)
+        for param, data in btns.items():
+            lbl = QLabel(data[0])
+            qle = QLineEdit()
 
-        TI = QLabel("Proba transmission : ")
-        TIV = QLineEdit(self.qLocale.toString(self.diseaseBoard.probaTransmission, precision = 2))
-        TIV.setValidator(QDoubleValidator(0.0, 1.0, 2))
-        TIV.textChanged.connect(self.updateR0)
-        TIV.setAlignment(Qt.AlignRight)
-        TIV.setFixedWidth(40)
-        confgrid.addWidget(TI, CONF_LIGNE_PROBA_TRANSMISSION, 0)
-        confgrid.addWidget(TIV, CONF_LIGNE_PROBA_TRANSMISSION, 1)
+            if param == IMMUNITY_RATE_BTN:
+                qle.setText(self.qLocale.toString(self.diseaseBoard.tauxImmunite, precision = 2))
+            elif param == TRANSMISSION_RATE_BTN:
+                qle.setText(self.qLocale.toString(self.diseaseBoard.probaTransmission, precision = 2))
+                qle.textChanged.connect(self.updateR0)
+            elif param == MORTALITY_RATE_BTN:
+                qle.setText(self.qLocale.toString(self.diseaseBoard.tauxMortalite, precision=2))
+            elif param == MORTALITY_DELAY_BTN:
+                qle.setText(self.qLocale.toString(self.diseaseBoard.delaiMortalite))
+            elif param == CONTAGION_DELAY_BTN:
+                qle.setText(self.qLocale.toString(self.diseaseBoard.delaiContagion))
+                qle.textChanged.connect(self.updateR0)
+            elif param == QUARANTINE_RATE_BTN:
+                qle.setText(self.qLocale.toString(self.diseaseBoard.tauxQuarantaine, precision=2))
+            elif param == QUARANTINE_DELAY_BTN:
+                qle.setText(self.qLocale.toString(self.diseaseBoard.delaiQuarantaine))
 
-        TI = QLabel("Taux Mortalité : ")
-        TIV = QLineEdit(self.qLocale.toString(self.diseaseBoard.tauxMortalite, precision = 2))
-        TIV.setValidator(QDoubleValidator(0.0, 1.0, 2))
-        TIV.setValidator(QDoubleValidator(0.0, 1.0, 2))
-        TIV.setAlignment(Qt.AlignRight)
-        TIV.setFixedWidth(40)
-        confgrid.addWidget(TI, CONF_LIGNE_TAUX_MORTALITE, 0)
-        confgrid.addWidget(TIV, CONF_LIGNE_TAUX_MORTALITE, 1)
+            if data[1] == "double":
+                qle.setValidator(QDoubleValidator(0.0, 1.0, 2))
 
-        TI = QLabel("Délai Transmission : ")
-        TIV = QLineEdit(self.qLocale.toString(self.diseaseBoard.delaiContagion))
-        TIV.setAlignment(Qt.AlignRight)
-        TIV.textChanged.connect(self.updateR0)
-        TIV.setFixedWidth(40)
-        confgrid.addWidget(TI, CONF_LIGNE_DELAI_RETABLISSEMENT, 0)
-        confgrid.addWidget(TIV, CONF_LIGNE_DELAI_RETABLISSEMENT, 1)
+            qle.setAlignment(Qt.AlignRight)
+            qle.setFixedWidth(40)
 
-        TI = QLabel("Délai Mortalité : ")
-        TIV = QLineEdit(self.qLocale.toString(self.diseaseBoard.delaiMortalite))
-        TIV.setAlignment(Qt.AlignRight)
-        TIV.setFixedWidth(40)
-        confgrid.addWidget(TI, CONF_LIGNE_DELAI_MORTALITE, 0)
-        confgrid.addWidget(TIV, CONF_LIGNE_DELAI_MORTALITE, 1)
-
-        TI = QLabel("Taux Quarantaine : ")
-        TIV = QLineEdit(self.qLocale.toString(self.diseaseBoard.tauxQuarantaine, precision = 2))
-        TIV.setAlignment(Qt.AlignRight)
-        TIV.setFixedWidth(40)
-        confgrid.addWidget(TI, CONF_LIGNE_TAUX_QUARANTAINE, 0)
-        confgrid.addWidget(TIV, CONF_LIGNE_TAUX_QUARANTAINE, 1)
-
-        TI = QLabel("Délai Quarantaine : ")
-        TIV = QLineEdit(str(self.diseaseBoard.delaiQuarantaine))
-        TIV.setAlignment(Qt.AlignRight)
-        TIV.setFixedWidth(40)
-        confgrid.addWidget(TI, CONF_LIGNE_DELAI_QUARANTAINE, 0)
-        confgrid.addWidget(TIV, CONF_LIGNE_DELAI_QUARANTAINE, 1)
+            confgrid.addWidget(lbl, param, 0)
+            confgrid.addWidget(qle, param, 1)
 
         return confgrid
 
@@ -250,17 +238,17 @@ class MainWindow(QMainWindow):
         if (self.nb_tours_init == self.nb_tours):
             # Reconfiguration de la simulation
             self.diseaseBoard.probaTransmission = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(CONF_LIGNE_PROBA_TRANSMISSION, 1).widget().text())[0]
+                self.confgrid.itemAtPosition(TRANSMISSION_RATE_BTN, 1).widget().text())[0]
             self.diseaseBoard.tauxMortalite = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(CONF_LIGNE_TAUX_MORTALITE, 1).widget().text())[0]
+                self.confgrid.itemAtPosition(MORTALITY_RATE_BTN, 1).widget().text())[0]
             self.diseaseBoard.delaiContagion = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(CONF_LIGNE_DELAI_RETABLISSEMENT, 1).widget().text())[0]
+                self.confgrid.itemAtPosition(CONTAGION_DELAY_BTN, 1).widget().text())[0]
             self.diseaseBoard.delaiMortalite = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(CONF_LIGNE_DELAI_MORTALITE, 1).widget().text())[0]
+                self.confgrid.itemAtPosition(MORTALITY_DELAY_BTN, 1).widget().text())[0]
             self.diseaseBoard.tauxQuarantaine = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(CONF_LIGNE_TAUX_QUARANTAINE, 1).widget().text())[0]
+                self.confgrid.itemAtPosition(QUARANTINE_RATE_BTN, 1).widget().text())[0]
             self.diseaseBoard.delaiQuarantaine = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(CONF_LIGNE_DELAI_QUARANTAINE, 1).widget().text())[0]
+                self.confgrid.itemAtPosition(QUARANTINE_DELAY_BTN, 1).widget().text())[0]
 
         if self.status == STATUS_STOPPED:
             self.status = STATUS_PLAYING
@@ -322,9 +310,9 @@ class MainWindow(QMainWindow):
 
     def updateR0(self):
         self.diseaseBoard.probaTransmission = self.qLocale.toDouble(
-            self.confgrid.itemAtPosition(CONF_LIGNE_PROBA_TRANSMISSION, 1).widget().text())[0]
+            self.confgrid.itemAtPosition(TRANSMISSION_RATE_BTN, 1).widget().text())[0]
         self.diseaseBoard.delaiContagion = self.qLocale.toDouble(
-            self.confgrid.itemAtPosition(CONF_LIGNE_DELAI_RETABLISSEMENT, 1).widget().text())[0]
+            self.confgrid.itemAtPosition(CONTAGION_DELAY_BTN, 1).widget().text())[0]
         self.r0Label.setText("R0 = {:.3} ".format(self.diseaseBoard.R0))
 
 
