@@ -12,6 +12,15 @@ Spread is a small python script that creates a simple model for disease spreadin
 
 Of course, it is assumed that once a sick person is into quarataine, they cannot infect any other person.
 
+## Usage
+
+```{console}    
+Usage: spread [options] round_number board_size cluster_number
+            round_number: number of rounds for the simulation
+            board_size: size of the board
+            cluster_number: number of initial board disease clusters
+```
+
 ## Output examples
 
 The result is displayed through a simple grid, that shows if an individual is :

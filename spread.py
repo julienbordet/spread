@@ -4,6 +4,8 @@
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+import sys
+import getopt
 
 from DiseaseBoard import DiseaseBoard
 
@@ -20,22 +22,24 @@ STATE = {
 STATUS_PLAYING = 1
 STATUS_STOPPED = 0
 
-IMMUNITY_RATE_BTN = 0
-TRANSMISSION_RATE_BTN = 1
-MORTALITY_RATE_BTN = 2
-MORTALITY_DELAY_BTN = 3
-CONTAGION_DELAY_BTN = 4
-QUARANTINE_RATE_BTN = 5
-QUARANTINE_DELAY_BTN = 6
+IMMUNITY_RATE_PARAM = 0
+CLUSTER_NB_PARAM = 1
+TRANSMISSION_RATE_PARAM = 2
+MORTALITY_RATE_PARAM = 3
+MORTALITY_DELAY_PARAM = 4
+CONTAGION_DELAY_PARAM = 5
+QUARANTINE_RATE_PARAM = 6
+QUARANTINE_DELAY_PARAM = 7
 
 btns = {
-    IMMUNITY_RATE_BTN: ("Tx Immunité", "double"),
-    TRANSMISSION_RATE_BTN: ("Tx transmission", "double"),
-    MORTALITY_RATE_BTN: ("Tx mortalité", "double"),
-    MORTALITY_DELAY_BTN: ("Délai mortalité", "int"),
-    CONTAGION_DELAY_BTN: ("Délai transmission", "int"),
-    QUARANTINE_RATE_BTN: ("Tx mise quarantaine", "int"),
-    QUARANTINE_DELAY_BTN: ("Délai mise quarantaine", "int")
+    IMMUNITY_RATE_PARAM: ("Tx Immunité", "double"),
+    CLUSTER_NB_PARAM: ("Nb cluster", "int"),
+    TRANSMISSION_RATE_PARAM: ("Tx transmission", "double"),
+    MORTALITY_RATE_PARAM: ("Tx mortalité", "double"),
+    MORTALITY_DELAY_PARAM: ("Délai mortalité", "int"),
+    CONTAGION_DELAY_PARAM: ("Délai transmission", "int"),
+    QUARANTINE_RATE_PARAM: ("Tx mise quarantaine", "int"),
+    QUARANTINE_DELAY_PARAM: ("Délai mise quarantaine", "int")
 }
 
 class Pos(QWidget):
@@ -191,21 +195,23 @@ class MainWindow(QMainWindow):
             lbl = QLabel(data[0])
             qle = QLineEdit()
 
-            if param == IMMUNITY_RATE_BTN:
+            if param == IMMUNITY_RATE_PARAM:
                 qle.setText(self.qLocale.toString(self.diseaseBoard.tauxImmunite, precision = 2))
-            elif param == TRANSMISSION_RATE_BTN:
+            if param == CLUSTER_NB_PARAM:
+                qle.setText(self.qLocale.toString(self.diseaseBoard.nbClusters))
+            elif param == TRANSMISSION_RATE_PARAM:
                 qle.setText(self.qLocale.toString(self.diseaseBoard.probaTransmission, precision = 2))
                 qle.textChanged.connect(self.updateR0)
-            elif param == MORTALITY_RATE_BTN:
+            elif param == MORTALITY_RATE_PARAM:
                 qle.setText(self.qLocale.toString(self.diseaseBoard.tauxMortalite, precision=2))
-            elif param == MORTALITY_DELAY_BTN:
+            elif param == MORTALITY_DELAY_PARAM:
                 qle.setText(self.qLocale.toString(self.diseaseBoard.delaiMortalite))
-            elif param == CONTAGION_DELAY_BTN:
+            elif param == CONTAGION_DELAY_PARAM:
                 qle.setText(self.qLocale.toString(self.diseaseBoard.delaiContagion))
                 qle.textChanged.connect(self.updateR0)
-            elif param == QUARANTINE_RATE_BTN:
+            elif param == QUARANTINE_RATE_PARAM:
                 qle.setText(self.qLocale.toString(self.diseaseBoard.tauxQuarantaine, precision=2))
-            elif param == QUARANTINE_DELAY_BTN:
+            elif param == QUARANTINE_DELAY_PARAM:
                 qle.setText(self.qLocale.toString(self.diseaseBoard.delaiQuarantaine))
 
             if data[1] == "double":
@@ -238,17 +244,17 @@ class MainWindow(QMainWindow):
         if (self.nb_tours_init == self.nb_tours):
             # Reconfiguration de la simulation
             self.diseaseBoard.probaTransmission = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(TRANSMISSION_RATE_BTN, 1).widget().text())[0]
+                self.confgrid.itemAtPosition(TRANSMISSION_RATE_PARAM, 1).widget().text())[0]
             self.diseaseBoard.tauxMortalite = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(MORTALITY_RATE_BTN, 1).widget().text())[0]
+                self.confgrid.itemAtPosition(MORTALITY_RATE_PARAM, 1).widget().text())[0]
             self.diseaseBoard.delaiContagion = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(CONTAGION_DELAY_BTN, 1).widget().text())[0]
+                self.confgrid.itemAtPosition(CONTAGION_DELAY_PARAM, 1).widget().text())[0]
             self.diseaseBoard.delaiMortalite = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(MORTALITY_DELAY_BTN, 1).widget().text())[0]
+                self.confgrid.itemAtPosition(MORTALITY_DELAY_PARAM, 1).widget().text())[0]
             self.diseaseBoard.tauxQuarantaine = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(QUARANTINE_RATE_BTN, 1).widget().text())[0]
+                self.confgrid.itemAtPosition(QUARANTINE_RATE_PARAM, 1).widget().text())[0]
             self.diseaseBoard.delaiQuarantaine = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(QUARANTINE_DELAY_BTN, 1).widget().text())[0]
+                self.confgrid.itemAtPosition(QUARANTINE_DELAY_PARAM, 1).widget().text())[0]
 
         if self.status == STATUS_STOPPED:
             self.status = STATUS_PLAYING
@@ -281,7 +287,7 @@ class MainWindow(QMainWindow):
 
     def resetButtonPressed(self):
         self.diseaseBoard.tauxImmunite = self.qLocale.toDouble(
-            self.confgrid.itemAtPosition(CONF_LIGNE_TAUX_IMMUNITE, 1).widget().text())[0]
+            self.confgrid.itemAtPosition(IMMUNITY_RATE_PARAM, 1).widget().text())[0]
 
         self.diseaseBoard.reset(self.nb_tours_init)
         self.nb_tours = self.nb_tours_init
@@ -310,16 +316,54 @@ class MainWindow(QMainWindow):
 
     def updateR0(self):
         self.diseaseBoard.probaTransmission = self.qLocale.toDouble(
-            self.confgrid.itemAtPosition(TRANSMISSION_RATE_BTN, 1).widget().text())[0]
+            self.confgrid.itemAtPosition(TRANSMISSION_RATE_PARAM, 1).widget().text())[0]
         self.diseaseBoard.delaiContagion = self.qLocale.toDouble(
-            self.confgrid.itemAtPosition(CONTAGION_DELAY_BTN, 1).widget().text())[0]
+            self.confgrid.itemAtPosition(CONTAGION_DELAY_PARAM, 1).widget().text())[0]
         self.r0Label.setText("R0 = {:.3} ".format(self.diseaseBoard.R0))
+
+def usage():
+    print(
+"""Usage: spread [options] round_number board_size cluster_number
+            round_number: number of rounds for the simulation
+            board_size: size of the board
+            cluster_number: number of initial board disease clusters""")
 
 
 if __name__ == '__main__':
+
     tours = 60
     board_size = 30
     nb_clusters = 3
+
+    try:
+        optlist, args = getopt.getopt(sys.argv[1:], 'h')
+    except getopt.GetoptError as err:
+        print(err)
+        usage()
+        sys.exit(2)
+
+    for o, c in optlist:
+        if o == '-h':
+            usage()
+            sys.exit()
+
+    if len(sys.argv) >= 2:
+        try:
+            tours = int(sys.argv[1])
+        except:
+            pass
+
+    if len(sys.argv) >= 3:
+        try:
+            board_size = int(sys.argv[2])
+        except:
+            pass
+
+    if len(sys.argv) >= 4:
+        try:
+            nb_clusters = int(sys.argv[3])
+        except:
+            pass
 
     db = DiseaseBoard(board_size, tours, nb_clusters)
     db.tauxImmunite = 0.4

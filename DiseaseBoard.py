@@ -107,6 +107,14 @@ class DiseaseBoard:
     def R0(self):
         return (self._proba_transmission * self._delai_contagion)
 
+    @property
+    def nbClusters(self):
+        return self._nb_clusters
+
+    @nbClusters.setter
+    def nbClusters(self, nb_clusters):
+        self._nb_clusters = nb_clusters
+
     ###################################
     # Fin de la gestion des attributs #
     ###################################
