@@ -204,15 +204,3 @@ class DiseaseBoard:
     def dernier_etat(self):
         return self._etat_db[-1]
 
-    def loop(self):
-        for x in range(0, self._nb_tour):
-            self.prochain_tour()
-
-    def nb_mort(self):
-        nb_decede = 0
-        for x in range(self._longueur):
-            for y in range(self._largeur):
-                if self._etat_db[-1][x, y] == STATE["DECEDE"]:
-                    nb_decede = nb_decede + 1
-
-        return nb_decede

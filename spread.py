@@ -107,23 +107,23 @@ class MainWindow(QMainWindow):
         self.nb_toursLabel.setText("%03d" % self.nb_tours)
 
         self._timer = QTimer()
-        self._timer.timeout.connect(self.update_timer)
+        self._timer.timeout.connect(self.updateTimer)
         self._timer.start(100)  # in ms
 
         self.goButton = QPushButton("GO")
         self.goButton.setFixedSize(QSize(72, 32))
         self.goButton.setFlat(False)
-        self.goButton.pressed.connect(self.goButton_pressed)
+        self.goButton.pressed.connect(self.goButtonPressed)
 
         self.nextButton = QPushButton("NEXT")
         self.nextButton.setFixedSize(QSize(72, 32))
         self.nextButton.setFlat(False)
-        self.nextButton.pressed.connect(self.nextButton_pressed)
+        self.nextButton.pressed.connect(self.nextButtonPressed)
 
         self.resetButton = QPushButton("RESET")
         self.resetButton.setFixedSize(QSize(82, 32))
         self.resetButton.setFlat(False)
-        self.resetButton.pressed.connect(self.resetButton_pressed)
+        self.resetButton.pressed.connect(self.resetButtonPressed)
 
         hb.addWidget(self.nb_toursLabel)
         hb.addWidget(self.goButton)
@@ -166,7 +166,7 @@ class MainWindow(QMainWindow):
         w.setLayout(vb)
         self.setCentralWidget(w)
 
-        self.init_map(dB.dernier_etat())
+        self.initMap(dB.dernier_etat())
         self.show()
 
     def setupConfGrid(self):
@@ -231,7 +231,7 @@ class MainWindow(QMainWindow):
 
         return confgrid
 
-    def init_map(self, etat):
+    def initMap(self, etat):
         # Add positions to the map
         for x in range(0, self.board_size):
             for y in range(0, self.board_size):
@@ -239,14 +239,14 @@ class MainWindow(QMainWindow):
                 self.grid.addWidget(w, x, y)
                 w.redraw(etat[x, y])
 
-    def update_map(self, etat):
+    def updateMap(self, etat):
         # Add positions to the map
         for x in range(0, self.board_size):
             for y in range(0, self.board_size):
                 w = self.grid.itemAtPosition(x, y).widget()
                 w.redraw(etat[x, y])
 
-    def goButton_pressed(self):
+    def goButtonPressed(self):
         if (self.nb_tours_init == self.nb_tours):
             # Reconfiguration de la simulation
             self.diseaseBoard.probaTransmission = self.qLocale.toDouble(
@@ -279,7 +279,7 @@ class MainWindow(QMainWindow):
                 self.confgrid.itemAtPosition(i, 1).widget().setStyleSheet("color: black; selection-color: black")
                 self.confgrid.itemAtPosition(i, 1).widget().repaint()
 
-    def nextButton_pressed(self):
+    def nextButtonPressed(self):
         self.nb_tours = self.nb_tours - 1
 
         if self.nb_tours < 0:
@@ -288,22 +288,22 @@ class MainWindow(QMainWindow):
 
         self.nb_toursLabel.setText("%03d" % self.nb_tours)
         etat = self.diseaseBoard.prochain_tour()
-        self.update_map(etat)
+        self.updateMap(etat)
         self.grid.update()
 
-    def resetButton_pressed(self):
+    def resetButtonPressed(self):
         self.diseaseBoard.tauxImmunite = self.qLocale.toDouble(
             self.confgrid.itemAtPosition(CONF_LIGNE_TAUX_IMMUNITE, 1).widget().text())[0]
 
         self.diseaseBoard.reset(self.nb_tours_init)
         self.nb_tours = self.nb_tours_init
         self.nb_toursLabel.setText("%03d" % self.nb_tours)
-        self.update_map(self.diseaseBoard.dernier_etat())
+        self.updateMap(self.diseaseBoard.dernier_etat())
 
         self.goButton.setText("GO")
         self.status = STATUS_STOPPED
 
-    def update_timer(self):
+    def updateTimer(self):
         if self.status == STATUS_PLAYING:
             self.nb_tours = self.nb_tours - 1
 
@@ -318,7 +318,7 @@ class MainWindow(QMainWindow):
 
             self.nb_toursLabel.setText("%03d" % self.nb_tours)
             etat = self.diseaseBoard.prochain_tour()
-            self.update_map(etat)
+            self.updateMap(etat)
 
     def updateR0(self):
         self.diseaseBoard.probaTransmission = self.qLocale.toDouble(
