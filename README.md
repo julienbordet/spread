@@ -45,11 +45,13 @@ At the end of each simulation, the user that change the parameters as he likes, 
 
 ## TODO
 
-- Make the number of rounds, the board size and the number of clusters available for change inside the app.
-- Make it possible to navigate through the spreading step by step, forward and backward.
-- Make the code full English, not half English half French
-- Make function and variable names coherent
-- Make a UX revamp
+TODO items now recorded as Issues
+
+- *Make it possible to navigate through the spreading step by step, forward and backward.*
+- *Make a UX revamp*
+- ~~Make the code full English, not half English half French~~
+- ~~Make function and variable names coherent~~
+- ~~Make the number of rounds, the board size and the number of clusters available for change inside the app.~~
 
 ## Bugs
 
