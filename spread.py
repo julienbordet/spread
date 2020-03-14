@@ -32,15 +32,18 @@ QUARANTINE_RATE_PARAM = 6
 QUARANTINE_DELAY_PARAM = 7
 
 btns = {
-    IMMUNITY_RATE_PARAM: ("Tx Immunité", "double"),
-    CLUSTER_NB_PARAM: ("Nb cluster", "int"),
-    TRANSMISSION_RATE_PARAM: ("Tx transmission", "double"),
-    MORTALITY_RATE_PARAM: ("Tx mortalité", "double"),
-    MORTALITY_DELAY_PARAM: ("Délai mortalité", "int"),
-    CONTAGION_DELAY_PARAM: ("Délai transmission", "int"),
-    QUARANTINE_RATE_PARAM: ("Tx mise quarantaine", "int"),
-    QUARANTINE_DELAY_PARAM: ("Délai mise quarantaine", "int")
+    IMMUNITY_RATE_PARAM: (("Tx Immunité", "Immunity Rate"), "double"),
+    CLUSTER_NB_PARAM: (("Nb cluster", "Cluster Nbr"), "int"),
+    TRANSMISSION_RATE_PARAM: (("Tx contagion", "Contagion Rate"), "double"),
+    MORTALITY_RATE_PARAM: (("Tx mortalité", "Death Rate"), "double"),
+    MORTALITY_DELAY_PARAM: (("Délai mortalité", "Death Delay"), "int"),
+    CONTAGION_DELAY_PARAM: (("Délai contagion", "Contagion Delay"), "int"),
+    QUARANTINE_RATE_PARAM: (("Tx mise quarantaine", "Quarantine Rate"), "int"),
+    QUARANTINE_DELAY_PARAM: (("Délai mise quarantaine", "Quarantine Delay"), "int")
 }
+
+LANG_FR = 0
+LANG_US = 1
 
 class Pos(QWidget):
     expandable = pyqtSignal(int, int)
@@ -101,6 +104,10 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("spread : disease spread simple model")
 
         self.qLocale = QLocale()
+        if self.qLocale.name()[0:2] == "fr":
+            self.lang = LANG_FR
+        else:
+            self.lang = LANG_US
 
         self.status = STATUS_STOPPED
 
@@ -192,7 +199,8 @@ class MainWindow(QMainWindow):
         confgrid.setSpacing(1)
 
         for param, data in btns.items():
-            lbl = QLabel(data[0])
+            lbl = QLabel(data[0][self.lang])
+
             qle = QLineEdit()
 
             if param == IMMUNITY_RATE_PARAM:
