@@ -29,7 +29,7 @@ The following changes are done to the model :
 
 The model used is showed on the following illustration 
 
-<img src="images/Models.png" alt="Start Window" width="450" align="middle" />
+<img src="images/Models.png" alt="Start Window" width="750" align="middle" />
 
 It is also assumed (ie simplified) that 
 
