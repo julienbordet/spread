@@ -49,13 +49,14 @@ Usage: spread [options] round_number board_size cluster_number
 ## Output examples
 
 The result is displayed through a simple grid, that shows if an individual is :
-- Not ill (white color)
+- Not sick (light blue color)
 - Immune (grey color)
-- Ill (red color)
+- Sick (red color)
 - In quarantine (yellow color)
+- Hospitalized (dark blue color)
 - Dead (black color)
 
-At the beginning, a given population is composed of immune people, not immune people, and ill people (the first clusters). 
+At the beginning, a given population is composed of immune people, not immune people, and sick people (the first clusters). 
 Right now there a 3 clusters in the application, and that must be changed directly into the python code.
 
 <img src="images/Illustration-1.png" alt="Start Window" width="450" align="middle" />
