@@ -224,6 +224,8 @@ class MainWindow(QMainWindow):
 
             if data[1] == "double":
                 qle.setValidator(QDoubleValidator(0.0, 1.0, 2))
+            elif data[1] == "int":
+                qle.setValidator(QIntValidator(0,self.nb_tours_init))
 
             qle.setAlignment(Qt.AlignRight)
             qle.setFixedWidth(40)
