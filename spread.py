@@ -12,11 +12,12 @@ from DiseaseBoard import DiseaseBoard
 DEFAULT_BOARD_SIZE = 50
 DEFAULT_TOUR = 5
 STATE = {
-    "SAIN": 0,
-    "MALADE": 1,
-    "IMMUN": 2,
-    "QUARANTAINE": 3,
-    "DECEDE": 4
+    "SUSCEPTIBLE": 0,
+    "INFECTED": 1,
+    "IMMUNE": 2,
+    "QUARANTINE": 3,
+    "HOSPITALIZED": 5,
+    "DECEASED": 4
 }
 
 STATUS_PLAYING = 1
@@ -28,8 +29,10 @@ TRANSMISSION_RATE_PARAM = 2
 MORTALITY_RATE_PARAM = 3
 MORTALITY_DELAY_PARAM = 4
 CONTAGION_DELAY_PARAM = 5
-QUARANTINE_RATE_PARAM = 6
-QUARANTINE_DELAY_PARAM = 7
+HOSPITALIZED_RATE_PARAM = 6
+HOSPITALIZED_DELAY_PARAM = 7
+QUARANTINE_RATE_PARAM = 8
+QUARANTINE_DELAY_PARAM = 9
 
 btns = {
     IMMUNITY_RATE_PARAM: (("Tx Immunité", "Immunity Rate"), "double"),
@@ -38,6 +41,8 @@ btns = {
     MORTALITY_RATE_PARAM: (("Tx mortalité", "Death Rate"), "double"),
     MORTALITY_DELAY_PARAM: (("Délai mortalité", "Death Delay"), "int"),
     CONTAGION_DELAY_PARAM: (("Délai contagion", "Contagion Delay"), "int"),
+    HOSPITALIZED_RATE_PARAM: (("Tx hospitalisation", "Hospitalization Rate"), "int"),
+    HOSPITALIZED_DELAY_PARAM: (("Délai hospitalisation", "Hospitalization Delay"), "int"),
     QUARANTINE_RATE_PARAM: (("Tx mise quarantaine", "Quarantine Rate"), "int"),
     QUARANTINE_DELAY_PARAM: (("Délai mise quarantaine", "Quarantine Delay"), "int")
 }
@@ -68,19 +73,20 @@ class Pos(QWidget):
 
         r = event.rect()
 
-        if self._state == STATE["SAIN"]:
-            color = self.palette().color(QPalette.Background)
-            outer, inner = color, color
-        elif self._state == STATE["MALADE"]:
+        if self._state == STATE["SUSCEPTIBLE"]:
+            blueColor = QColor(210,210,255)
+            outer, inner = blueColor, blueColor
+        elif self._state == STATE["INFECTED"]:
             outer, inner = Qt.darkRed, Qt.red
-        elif self._state == STATE["DECEDE"]:
+        elif self._state == STATE["DECEASED"]:
             outer, inner = Qt.black, Qt.black
-        elif self._state == STATE["QUARANTAINE"]:
+        elif self._state == STATE["QUARANTINE"]:
             outer, inner = Qt.darkYellow, Qt.yellow
-        elif self._state == STATE["IMMUN"]:
+        elif self._state == STATE["IMMUNE"]:
             outer, inner = Qt.gray, Qt.lightGray
-        else:
-            outer, inner = Qt.blue, Qt.blue
+        elif self._state == STATE["HOSPITALIZED"]:
+            darkblueColor = QColor(100,110,200)
+            outer, inner = darkblueColor, darkblueColor
 
         p.fillRect(r, QBrush(inner))
         pen = QPen(outer)
@@ -185,6 +191,17 @@ class MainWindow(QMainWindow):
         r0Label.setStyleSheet("color: grey")
         self.r0Label = r0Label
         footerLayout.addWidget(r0Label)
+
+        deceasedLabel = QLabel("#Death = " + self.qLocale.toString(self.diseaseBoard.R0))
+        deceasedLabel.setStyleSheet("color: grey")
+        self.deceasedLabel = deceasedLabel
+        footerLayout.addWidget(deceasedLabel)
+
+        infectedLabel = QLabel("#Sick = " + self.qLocale.toString(self.diseaseBoard.sickNbr))
+        infectedLabel.setStyleSheet("color: grey")
+        self.infectedLabel = infectedLabel
+        footerLayout.addWidget(infectedLabel)
+
         vb.addLayout(footerLayout)
 
         w.setLayout(vb)
@@ -217,6 +234,10 @@ class MainWindow(QMainWindow):
             elif param == CONTAGION_DELAY_PARAM:
                 qle.setText(self.qLocale.toString(self.diseaseBoard.contagionDelay))
                 qle.textChanged.connect(self.updateR0)
+            elif param == HOSPITALIZED_RATE_PARAM:
+                qle.setText(self.qLocale.toString(self.diseaseBoard.hospitalizedRate))
+            elif param == HOSPITALIZED_DELAY_PARAM:
+                qle.setText(self.qLocale.toString(self.diseaseBoard.hospitalizedDelay))
             elif param == QUARANTINE_RATE_PARAM:
                 qle.setText(self.qLocale.toString(self.diseaseBoard.quarantineRate, precision=2))
             elif param == QUARANTINE_DELAY_PARAM:
@@ -243,12 +264,20 @@ class MainWindow(QMainWindow):
                 self.grid.addWidget(w, x, y)
                 w.redraw(etat[x, y])
 
-    def updateMap(self, etat):
+    def updateMapAndFooter(self, etat):
         # Add positions to the map
         for x in range(0, self.board_size):
             for y in range(0, self.board_size):
                 w = self.grid.itemAtPosition(x, y).widget()
                 w.redraw(etat[x, y])
+
+        self.updateR0()
+
+        self.infectedLabel.setText("#Sick = " + self.qLocale.toString(self.diseaseBoard.sickNbr) +
+                                   " (inc #Hospit. = " +
+                                   self.qLocale.toString(self.diseaseBoard.hospitalizedNbr) + ")")
+
+        self.deceasedLabel.setText("#Deceased = " + self.qLocale.toString(self.diseaseBoard.deceasedNbr))
 
     def goButtonPressed(self):
         if (self.nb_tours_init == self.nb_tours):
@@ -259,6 +288,10 @@ class MainWindow(QMainWindow):
                 self.confgrid.itemAtPosition(MORTALITY_RATE_PARAM, 1).widget().text())[0]
             self.diseaseBoard.contagionDelay = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(CONTAGION_DELAY_PARAM, 1).widget().text())[0]
+            self.diseaseBoard.hospitalizedRate = self.qLocale.toDouble(
+                self.confgrid.itemAtPosition(HOSPITALIZED_RATE_PARAM, 1).widget().text())[0]
+            self.diseaseBoard.hospitalizedDelay = self.qLocale.toDouble(
+                self.confgrid.itemAtPosition(HOSPITALIZED_DELAY_PARAM, 1).widget().text())[0]
             self.diseaseBoard.mortalityDelay = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(MORTALITY_DELAY_PARAM, 1).widget().text())[0]
             self.diseaseBoard.quarantineRate = self.qLocale.toDouble(
@@ -292,7 +325,7 @@ class MainWindow(QMainWindow):
 
         self.nb_toursLabel.setText("%03d" % self.nb_tours)
         etat = self.diseaseBoard.nextRound()
-        self.updateMap(etat)
+        self.updateMapAndFooter(etat)
         self.grid.update()
 
     def resetButtonPressed(self):
@@ -305,7 +338,7 @@ class MainWindow(QMainWindow):
         self.diseaseBoard.reset(self.nb_tours_init)
         self.nb_tours = self.nb_tours_init
         self.nb_toursLabel.setText("%03d" % self.nb_tours)
-        self.updateMap(self.diseaseBoard.lastBoard())
+        self.updateMapAndFooter(self.diseaseBoard.lastBoard())
 
         self.goButton.setText("GO")
         self.status = STATUS_STOPPED
@@ -325,7 +358,7 @@ class MainWindow(QMainWindow):
 
             self.nb_toursLabel.setText("%03d" % self.nb_tours)
             etat = self.diseaseBoard.nextRound()
-            self.updateMap(etat)
+            self.updateMapAndFooter(etat)
 
     def updateR0(self):
         self.diseaseBoard.contagionRate = self.qLocale.toDouble(

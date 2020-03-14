@@ -6,10 +6,11 @@ from random import random, randrange
 
 # Couleur associée à l'état
 STATE = {
-    "HEALTHY": 0,
-    "SICK": 1,
+    "SUSCEPTIBLE": 0,
+    "INFECTED": 1,
     "IMMUNE": 2,
     "QUARANTINE": 3,
+    "HOSPITALIZED": 5,
     "DECEASED": 4
 }
 
@@ -23,12 +24,14 @@ class DiseaseBoard:
         self._cluster_nbr = cluster_nbr
 
         self._round_nbr = round_nbr
-        self._current_round = 0
 
         self._immunity_rate = 0.2
 
         self._death_rate = 0.03
         self._death_delay = 6
+
+        self._hospitalized_rate = 0.2
+        self._hospitalized_delay = 2
 
         self._quarantine_rate = 0.2
         self._quarantine_delay = 2
@@ -37,10 +40,7 @@ class DiseaseBoard:
         self._contagion_rate = 1 / 8
         self._contagion_delay = 3
 
-        self._state_db = []
-        self._contamination_dates = np.zeros((self._length, self._width), dtype=int)
-
-        self.initBoard()
+        self.reset(round_nbr)
 
     #########################
     # Gestion des attributs #
@@ -103,8 +103,20 @@ class DiseaseBoard:
         self._contagion_delay = delai_contagion
 
     @property
-    def R0(self):
-        return (self._contagion_rate * self._contagion_delay)
+    def hospitalizedRate(self):
+        return self._hospitalized_rate
+
+    @hospitalizedRate.setter
+    def hospitalizedRate(self, hospitalized_rate):
+        self._hospitalized_rate = hospitalized_rate
+
+    @property
+    def hospitalizedDelay(self):
+        return self._hospitalized_delay
+
+    @hospitalizedDelay.setter
+    def hospitalizedDelay(self, hospitalized_delay):
+        self._hospitalized_delay = hospitalized_delay
 
     @property
     def clusterNbr(self):
@@ -114,13 +126,30 @@ class DiseaseBoard:
     def clusterNbr(self, nb_clusters):
         self._cluster_nbr = nb_clusters
 
+    @property
+    def deceasedNbr(self):
+        return self._counter[STATE["DECEASED"]]
+
+    @property
+    def sickNbr(self):
+        print ("{0}, {1}". format(self._counter[STATE["INFECTED"]], self._counter[STATE["HOSPITALIZED"]]))
+        return self._counter[STATE["INFECTED"]] + self._counter[STATE["HOSPITALIZED"]]
+
+    @property
+    def hospitalizedNbr(self):
+        return self._counter[STATE["HOSPITALIZED"]]
+
+    @property
+    def R0(self):
+        return (self._contagion_rate * self._contagion_delay)
+
     ###################################
     # Fin de la gestion des attributs #
     ###################################
 
     def initBoard(self):
         etat0 = np.zeros((self._length, self._width), dtype=int)
-        etat0[0:self._length, 0:self._width] = STATE["HEALTHY"]
+        etat0[0:self._length, 0:self._width] = STATE["SUSCEPTIBLE"]
 
         # Creation de la population immunisée
         for x in range(self._length):
@@ -131,16 +160,21 @@ class DiseaseBoard:
         for i in range(self._cluster_nbr):
             x0 = randrange(self._length)
             y0 = randrange(self._width)
-            etat0[x0, y0] = STATE["SICK"]
+            etat0[x0, y0] = STATE["INFECTED"]
             self._contamination_dates[x0, y0] = -1
 
             self._state_db.append(etat0)
+            self._counter[STATE["INFECTED"]] += 1
 
     def reset(self, nb_tours):
         self._state_db = []
         self._contamination_dates = np.zeros((self._length, self._width), dtype=int)
         self._round_nbr = nb_tours
         self._current_round = 0
+
+        self._counter = np.empty(len(STATE))
+        for s,n in STATE.items():
+            self._counter[n] = 0
 
         self.initBoard()
 
@@ -151,21 +185,47 @@ class DiseaseBoard:
 
         for x in range(self._length):
             for y in range(self._width):
-                if current_state[x, y] == STATE["QUARANTINE"] or current_state[x, y] == STATE["SICK"]:
+                if current_state[x, y] == STATE["QUARANTINE"]:
                     if self._current_round - self._contamination_dates[x, y] == self._contagion_delay:
                         state[x, y] = STATE["IMMUNE"]
-                        continue  # Nécessité de faire continue car le test STATE["MْALADE"] se fait sur current_state
+                        self._counter[STATE["QUARANTINE"]] -= 1
+                        self._counter[STATE["IMMUNE"]] += 1
+                        continue
 
+                if current_state[x, y] == STATE["HOSPITALIZED"]:
                     if self._current_round - self._contamination_dates[x, y] == self._death_delay:
-                        if random() <= self._death_rate:
+                        if random() <= self._death_rate / self._hospitalized_rate:
                             state[x, y] = STATE["DECEASED"]
+                            self._counter[STATE["HOSPITALIZED"]] -= 1
+                            self._counter[STATE["DECEASED"]] += 1
                             continue
 
-                if current_state[x, y] == STATE["SICK"]:
+                    if self._current_round - self._contamination_dates[x, y] == self._contagion_delay:
+                        state[x, y] = STATE["IMMUNE"]
+                        self._counter[STATE["HOSPITALIZED"]] -= 1
+                        self._counter[STATE["IMMUNE"]] += 1
+                        continue
+
+                if current_state[x, y] == STATE["INFECTED"]:
+                    if self._current_round - self._contamination_dates[x, y] == self._hospitalized_delay:
+                        if random() <= self._hospitalized_rate:
+                            state[x, y] = STATE["HOSPITALIZED"]
+                            self._counter[STATE["INFECTED"]] -= 1
+                            self._counter[STATE["HOSPITALIZED"]] += 1
+                            continue
+
                     if self._current_round - self._contamination_dates[x, y] == self._quarantine_delay:
                         if random() <= self._quarantine_rate:
                             state[x, y] = STATE["QUARANTINE"]
+                            self._counter[STATE["INFECTED"]] -= 1
+                            self._counter[STATE["QUARANTINE"]] += 1
                             continue
+
+                    if self._current_round - self._contamination_dates[x, y] == self._contagion_delay:
+                        state[x, y] = STATE["IMMUNE"]
+                        self._counter[STATE["INFECTED"]] -= 1
+                        self._counter[STATE["IMMUNE"]] += 1
+                        continue
 
                     #
                     # Contamination des voisins
@@ -198,13 +258,18 @@ class DiseaseBoard:
                                       [x + 1, y - 1], [x + 1, y], [x + 1, y + 1]]
 
                     for nb in neighbours:
-                        if current_state[nb[0], nb[1]] == STATE["HEALTHY"]:
+                        if current_state[nb[0], nb[1]] == STATE["SUSCEPTIBLE"]:
                             if random() < self._contagion_rate:
-                                state[nb[0], nb[1]] = STATE["SICK"]
                                 self._contamination_dates[nb[0], nb[1]] = self._current_round
 
+                                # Same person might have been infected at the same round by another person : the
+                                # tests avoids double counting
+                                if not state[nb[0], nb[1]] == STATE["INFECTED"]:
+                                    state[nb[0], nb[1]] = STATE["INFECTED"]
+                                    self._counter[STATE["INFECTED"]] += 1
+
         self._state_db.append(state)
-        self._current_round = self._current_round + 1
+        self._current_round += 1
 
         return state
 

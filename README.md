@@ -12,6 +12,31 @@ Spread is a small python script that creates a simple model for disease spreadin
 
 Of course, it is assumed that once a sick person is into quarataine, they cannot infect any other person.
 
+## Model
+
+The model used is a variation of a SIQRD model. This model distributes the population among 5 categories :
+
+- **S for Susceptible**: people not infected, who might become sick
+- **I for Infected**: people infected
+- **Q for Quarantine**: people infected but isolated so that they cannot infect any more people
+- **R for Recovered**: people who were infected but recovered, and who are now immune to the disease
+- **D for Deceased**: people who died from the disease
+
+The following changes are done to the model :
+
+- the recovered compartment R includes the people immune for genetical reasons.
+- a new **H for Hospitalized** state has been added, in order to assess the disease impact of healthcare system
+
+The model used is showed on the following illustration 
+
+<img src="images/Models.png" alt="Start Window" width="450" align="middle" />
+
+It is also assumed (ie simplified) that 
+
+- contagion state and infected state are the same state : as soon as a patient has recovered, he is not contagious anymore, and vice-versa
+- every patient died in hospital, that is no critical case is ignored to point to ignore hospitalization
+
+
 ## Usage
 
 ```{console}    
