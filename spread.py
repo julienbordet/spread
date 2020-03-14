@@ -183,7 +183,7 @@ class MainWindow(QMainWindow):
         w.setLayout(vb)
         self.setCentralWidget(w)
 
-        self.initMap(dB.dernier_etat())
+        self.initMap(dB.lastBoard())
         self.show()
 
     def setupConfGrid(self):
@@ -196,23 +196,23 @@ class MainWindow(QMainWindow):
             qle = QLineEdit()
 
             if param == IMMUNITY_RATE_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.tauxImmunite, precision = 2))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.immunityRate, precision = 2))
             if param == CLUSTER_NB_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.nbClusters))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.clusterNbr))
             elif param == TRANSMISSION_RATE_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.probaTransmission, precision = 2))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.contagionRate, precision = 2))
                 qle.textChanged.connect(self.updateR0)
             elif param == MORTALITY_RATE_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.tauxMortalite, precision=2))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.mortalityRate, precision=2))
             elif param == MORTALITY_DELAY_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.delaiMortalite))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.mortalityDelay))
             elif param == CONTAGION_DELAY_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.delaiContagion))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.contagionDelay))
                 qle.textChanged.connect(self.updateR0)
             elif param == QUARANTINE_RATE_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.tauxQuarantaine, precision=2))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.quarantineRate, precision=2))
             elif param == QUARANTINE_DELAY_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.delaiQuarantaine))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.quarantineDelay))
 
             if data[1] == "double":
                 qle.setValidator(QDoubleValidator(0.0, 1.0, 2))
@@ -243,17 +243,17 @@ class MainWindow(QMainWindow):
     def goButtonPressed(self):
         if (self.nb_tours_init == self.nb_tours):
             # Reconfiguration de la simulation
-            self.diseaseBoard.probaTransmission = self.qLocale.toDouble(
+            self.diseaseBoard.contagionRate = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(TRANSMISSION_RATE_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.tauxMortalite = self.qLocale.toDouble(
+            self.diseaseBoard.mortalityRate = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(MORTALITY_RATE_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.delaiContagion = self.qLocale.toDouble(
+            self.diseaseBoard.contagionDelay = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(CONTAGION_DELAY_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.delaiMortalite = self.qLocale.toDouble(
+            self.diseaseBoard.mortalityDelay = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(MORTALITY_DELAY_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.tauxQuarantaine = self.qLocale.toDouble(
+            self.diseaseBoard.quarantineRate = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(QUARANTINE_RATE_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.delaiQuarantaine = self.qLocale.toDouble(
+            self.diseaseBoard.quarantineDelay = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(QUARANTINE_DELAY_PARAM, 1).widget().text())[0]
 
         if self.status == STATUS_STOPPED:
@@ -281,18 +281,18 @@ class MainWindow(QMainWindow):
             return
 
         self.nb_toursLabel.setText("%03d" % self.nb_tours)
-        etat = self.diseaseBoard.prochain_tour()
+        etat = self.diseaseBoard.nextRound()
         self.updateMap(etat)
         self.grid.update()
 
     def resetButtonPressed(self):
-        self.diseaseBoard.tauxImmunite = self.qLocale.toDouble(
+        self.diseaseBoard.immunityRate = self.qLocale.toDouble(
             self.confgrid.itemAtPosition(IMMUNITY_RATE_PARAM, 1).widget().text())[0]
 
         self.diseaseBoard.reset(self.nb_tours_init)
         self.nb_tours = self.nb_tours_init
         self.nb_toursLabel.setText("%03d" % self.nb_tours)
-        self.updateMap(self.diseaseBoard.dernier_etat())
+        self.updateMap(self.diseaseBoard.lastBoard())
 
         self.goButton.setText("GO")
         self.status = STATUS_STOPPED
@@ -311,13 +311,13 @@ class MainWindow(QMainWindow):
                 return
 
             self.nb_toursLabel.setText("%03d" % self.nb_tours)
-            etat = self.diseaseBoard.prochain_tour()
+            etat = self.diseaseBoard.nextRound()
             self.updateMap(etat)
 
     def updateR0(self):
-        self.diseaseBoard.probaTransmission = self.qLocale.toDouble(
+        self.diseaseBoard.contagionRate = self.qLocale.toDouble(
             self.confgrid.itemAtPosition(TRANSMISSION_RATE_PARAM, 1).widget().text())[0]
-        self.diseaseBoard.delaiContagion = self.qLocale.toDouble(
+        self.diseaseBoard.contagionDelay = self.qLocale.toDouble(
             self.confgrid.itemAtPosition(CONTAGION_DELAY_PARAM, 1).widget().text())[0]
         self.r0Label.setText("R0 = {:.3} ".format(self.diseaseBoard.R0))
 
@@ -366,15 +366,15 @@ if __name__ == '__main__':
             pass
 
     db = DiseaseBoard(board_size, tours, nb_clusters)
-    db.tauxImmunite = 0.4
+    db.immunityRate = 0.4
     # Entre 2 et 3 personnes contaminées par malade, si on considère qu'à chaque tour (a peu près un jour), on
     # a l'occasion de contaminer environ 15 personnes, et ce pendant la durée de la contamination, considérée comme
     # égale au délai de rétablissement
 
-    db.delaiContagion = 7
-    db.probaTransmission = 2 / 7
-    db.delaiQuarantaine = 6
-    db.tauxQuarantaine = 0.8
+    db.contagionDelay = 7
+    db.contagionRate = 2 / 7
+    db.quarantineDelay = 6
+    db.quarantineRate = 0.8
 
     app = QApplication([])
     window = MainWindow(board_size, tours, db)
