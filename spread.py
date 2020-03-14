@@ -4,6 +4,8 @@
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+from pyqtgraph import PlotWidget, plot
+import pyqtgraph as pg
 import sys
 import getopt
 
@@ -34,7 +36,7 @@ HOSPITALIZED_DELAY_PARAM = 7
 QUARANTINE_RATE_PARAM = 8
 QUARANTINE_DELAY_PARAM = 9
 
-btns = {
+CONF_ELEMENTS = {
     IMMUNITY_RATE_PARAM: (("Tx Immunité", "Immunity Rate"), "double"),
     CLUSTER_NB_PARAM: (("Nb cluster", "Cluster Nbr"), "int"),
     TRANSMISSION_RATE_PARAM: (("Tx contagion", "Contagion Rate"), "double"),
@@ -43,12 +45,17 @@ btns = {
     CONTAGION_DELAY_PARAM: (("Délai contagion", "Contagion Delay"), "int"),
     HOSPITALIZED_RATE_PARAM: (("Tx hospitalisation", "Hospitalization Rate"), "int"),
     HOSPITALIZED_DELAY_PARAM: (("Délai hospitalisation", "Hospitalization Delay"), "int"),
-    QUARANTINE_RATE_PARAM: (("Tx mise quarantaine", "Quarantine Rate"), "int"),
+    QUARANTINE_RATE_PARAM: (("Tx mise quarantaine", "Quarantine Rate"), "double"),
     QUARANTINE_DELAY_PARAM: (("Délai mise quarantaine", "Quarantine Delay"), "int")
 }
 
 LANG_FR = 0
 LANG_US = 1
+
+INFECTED_PLOT = 0
+HOSPITALIZED_PLOT = 1
+QUARANTINED_PLOT = 2
+PLOT_NB = 3
 
 class Pos(QWidget):
     expandable = pyqtSignal(int, int)
@@ -105,7 +112,7 @@ class Pos(QWidget):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, newboard_size, nb_tours, dB, *args, **kwargs):
+    def __init__(self, newboard_size, round_nbr, dB, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.setWindowTitle("spread : disease spread simple model")
 
@@ -119,8 +126,8 @@ class MainWindow(QMainWindow):
 
         self.board_size = newboard_size
         self.diseaseBoard = dB
-        self.nb_tours_init = nb_tours
-        self.nb_tours = nb_tours
+        self.total_round_nbr = round_nbr
+        self.round_nbr = 0
 
         # w est le Widge QT affiché dans la fenêtre
         w = QWidget()
@@ -131,7 +138,7 @@ class MainWindow(QMainWindow):
 
         self.nb_toursLabel = QLabel()
         self.nb_toursLabel.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        self.nb_toursLabel.setText("%03d" % self.nb_tours)
+        self.nb_toursLabel.setText("%03d" % self.round_nbr)
 
         self._timer = QTimer()
         self._timer.timeout.connect(self.updateTimer)
@@ -165,28 +172,58 @@ class MainWindow(QMainWindow):
         vb.addStretch(1)
 
         # Construction de la partie principale de la fenêtre
-        # A l'aide d'un Hbox, mise en place d'une barre à gauche pour la configuration (QGridLayout de QLabel et de
-        # QLineEdit) puis à droite le board
+        # A l'aide d'un Hbox (mainLayout), mise en place d'une barre à gauche pour la configuration (QGridLayout de
+        # QLabel et de QLineEdit) puis à droite le board et enfin la zone de graphique
 
-        mainLayout = QHBoxLayout()
-        mainLayout.addStretch(1)
-
+        #
+        # Panneau de configuration à gauche
+        #
         self.confgrid = self.setupConfGrid()
 
+        #
+        # Principal grid pour l'affichage du diseaseBoard
+        #
         self.grid = QGridLayout()
         self.grid.setSpacing(1)
 
         # Nécessaire pour permettre à l'affichage du board de rester compact
-
         gridLayout = QVBoxLayout()
         gridLayout.addStretch(1)
         gridLayout.addLayout(self.grid)
 
+        #
+        # Zone pour afficher les graphiques
+        #
+
+        graphLayout = QHBoxLayout()
+        graphWidget = pg.PlotWidget()
+        graphWidget.setBackground(self.palette().color(QPalette.Window))
+        graphWidget.setXRange(0, self.total_round_nbr, padding=0)
+        graphLayout.addWidget(graphWidget)
+
+        self.plots = [None] * PLOT_NB
+        self.plots[INFECTED_PLOT] = graphWidget.plot([],[], pen=pg.mkPen(color = (255,0,0), width=3), name="infected")
+        self.plots[HOSPITALIZED_PLOT] = graphWidget.plot([],[], pen=pg.mkPen(color=(100,110,200), width=3), name="hospitalized")
+        self.plots[QUARANTINED_PLOT] = graphWidget.plot([],[], pen=pg.mkPen(color=(255,255,0), width=3), name="quarantined")
+        graphWidget.addLegend()
+
+        mainLayout = QHBoxLayout()
+        mainLayout.addStretch(1)
         mainLayout.addLayout(self.confgrid)
         mainLayout.addLayout(gridLayout)
+        mainLayout.addLayout(graphLayout)
         vb.addLayout(mainLayout)
 
+        #
+        # Footer configuration
+        #
+
         footerLayout = QHBoxLayout()
+
+        popLabel = QLabel("Pop = " + self.qLocale.toString(board_size * self.board_size))
+        popLabel.setStyleSheet("color: grey")
+        footerLayout.addWidget(popLabel)
+
         r0Label = QLabel("R0 = " + self.qLocale.toString(self.diseaseBoard.R0))
         r0Label.setStyleSheet("color: grey")
         self.r0Label = r0Label
@@ -215,7 +252,7 @@ class MainWindow(QMainWindow):
         confgrid = QGridLayout()
         confgrid.setSpacing(1)
 
-        for param, data in btns.items():
+        for param, data in CONF_ELEMENTS.items():
             lbl = QLabel(data[0][self.lang])
 
             qle = QLineEdit()
@@ -246,7 +283,7 @@ class MainWindow(QMainWindow):
             if data[1] == "double":
                 qle.setValidator(QDoubleValidator(0.0, 1.0, 2))
             elif data[1] == "int":
-                qle.setValidator(QIntValidator(0,self.nb_tours_init))
+                qle.setValidator(QIntValidator(0, self.total_round_nbr))
 
             qle.setAlignment(Qt.AlignRight)
             qle.setFixedWidth(40)
@@ -279,8 +316,12 @@ class MainWindow(QMainWindow):
 
         self.deceasedLabel.setText("#Deceased = " + self.qLocale.toString(self.diseaseBoard.deceasedNbr))
 
+        self.plots[INFECTED_PLOT].setData(range(0, self.round_nbr + 1), self.diseaseBoard.infectedData)
+        self.plots[HOSPITALIZED_PLOT].setData(range(0, self.round_nbr + 1), self.diseaseBoard.hospitalizedData)
+        self.plots[QUARANTINED_PLOT].setData(range(0, self.round_nbr + 1), self.diseaseBoard.quarantinedData)
+
     def goButtonPressed(self):
-        if (self.nb_tours_init == self.nb_tours):
+        if (self.round_nbr == 0):
             # Reconfiguration de la simulation
             self.diseaseBoard.contagionRate = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(TRANSMISSION_RATE_PARAM, 1).widget().text())[0]
@@ -317,13 +358,13 @@ class MainWindow(QMainWindow):
                 self.confgrid.itemAtPosition(i, 1).widget().repaint()
 
     def nextButtonPressed(self):
-        self.nb_tours = self.nb_tours - 1
+        self.round_nbr += 1
 
-        if self.nb_tours < 0:
+        if self.round_nbr > self.total_round_nbr:
             self.status = STATUS_STOPPED
             return
 
-        self.nb_toursLabel.setText("%03d" % self.nb_tours)
+        self.nb_toursLabel.setText("%03d" % self.round_nbr)
         etat = self.diseaseBoard.nextRound()
         self.updateMapAndFooter(etat)
         self.grid.update()
@@ -335,9 +376,9 @@ class MainWindow(QMainWindow):
         self.diseaseBoard.clusterNbr = self.qLocale.toInt(
             self.confgrid.itemAtPosition(CLUSTER_NB_PARAM, 1).widget().text())[0]
 
-        self.diseaseBoard.reset(self.nb_tours_init)
-        self.nb_tours = self.nb_tours_init
-        self.nb_toursLabel.setText("%03d" % self.nb_tours)
+        self.diseaseBoard.reset(self.total_round_nbr)
+        self.round_nbr = 0
+        self.nb_toursLabel.setText("%03d" % self.round_nbr)
         self.updateMapAndFooter(self.diseaseBoard.lastBoard())
 
         self.goButton.setText("GO")
@@ -345,9 +386,9 @@ class MainWindow(QMainWindow):
 
     def updateTimer(self):
         if self.status == STATUS_PLAYING:
-            self.nb_tours = self.nb_tours - 1
+            self.round_nbr += 1
 
-            if self.nb_tours < 0:
+            if self.round_nbr > self.total_round_nbr:
                 self.status = STATUS_STOPPED
                 for i in range(self.confgrid.rowCount()):
                     self.confgrid.itemAtPosition(i,1).widget().setReadOnly(False)
@@ -356,7 +397,7 @@ class MainWindow(QMainWindow):
 
                 return
 
-            self.nb_toursLabel.setText("%03d" % self.nb_tours)
+            self.nb_toursLabel.setText("%03d" % self.round_nbr)
             etat = self.diseaseBoard.nextRound()
             self.updateMapAndFooter(etat)
 

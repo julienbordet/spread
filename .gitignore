@@ -2,4 +2,5 @@
 .idea*
 *.swp
 support
+*(conflicted)*
 

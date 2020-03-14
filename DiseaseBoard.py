@@ -128,16 +128,31 @@ class DiseaseBoard:
 
     @property
     def deceasedNbr(self):
+        return self._counter[STATE["DECEASED"]][-1]
+
+    @property
+    def deceasedData(self):
         return self._counter[STATE["DECEASED"]]
 
     @property
+    def infectedData(self):
+        return self._counter[STATE["INFECTED"]]
+
+    @property
+    def quarantinedData(self):
+        return self._counter[STATE["QUARANTINE"]]
+
+    @property
+    def hospitalizedData(self):
+        return self._counter[STATE["HOSPITALIZED"]]
+
+    @property
     def sickNbr(self):
-        print ("{0}, {1}". format(self._counter[STATE["INFECTED"]], self._counter[STATE["HOSPITALIZED"]]))
-        return self._counter[STATE["INFECTED"]] + self._counter[STATE["HOSPITALIZED"]]
+        return self._counter[STATE["INFECTED"]][-1] + self._counter[STATE["HOSPITALIZED"]][-1]
 
     @property
     def hospitalizedNbr(self):
-        return self._counter[STATE["HOSPITALIZED"]]
+        return self._counter[STATE["HOSPITALIZED"]][-1]
 
     @property
     def R0(self):
@@ -164,7 +179,7 @@ class DiseaseBoard:
             self._contamination_dates[x0, y0] = -1
 
             self._state_db.append(etat0)
-            self._counter[STATE["INFECTED"]] += 1
+            self._counter[STATE["INFECTED"]][self._current_round] += 1 # _current_round should be 0 as we init the board
 
     def reset(self, nb_tours):
         self._state_db = []
@@ -172,59 +187,69 @@ class DiseaseBoard:
         self._round_nbr = nb_tours
         self._current_round = 0
 
-        self._counter = np.empty(len(STATE))
-        for s,n in STATE.items():
-            self._counter[n] = 0
+        self._counter = []
+        for n in range(len(STATE.items())):
+            self._counter.append([])
+            self._counter[n].append(0)
 
         self.initBoard()
 
     def nextRound(self):
+        """
+        Create next round state
+
+        :return: next round state
+        """
         neighbours = []
         current_state = self._state_db[-1]
         state = current_state.copy()
+
+        # We init the next round data with the same data as previous round
+        for n in range(len(STATE.items())):
+            self._counter[n].append(self._counter[n][-1])
 
         for x in range(self._length):
             for y in range(self._width):
                 if current_state[x, y] == STATE["QUARANTINE"]:
                     if self._current_round - self._contamination_dates[x, y] == self._contagion_delay:
                         state[x, y] = STATE["IMMUNE"]
-                        self._counter[STATE["QUARANTINE"]] -= 1
-                        self._counter[STATE["IMMUNE"]] += 1
+                        self._counter[STATE["QUARANTINE"]][-1] -= 1
+                        self._counter[STATE["IMMUNE"]][-1] += 1
                         continue
 
                 if current_state[x, y] == STATE["HOSPITALIZED"]:
                     if self._current_round - self._contamination_dates[x, y] == self._death_delay:
                         if random() <= self._death_rate / self._hospitalized_rate:
                             state[x, y] = STATE["DECEASED"]
-                            self._counter[STATE["HOSPITALIZED"]] -= 1
-                            self._counter[STATE["DECEASED"]] += 1
+                            self._counter[STATE["HOSPITALIZED"]][-1] -= 1
+                            self._counter[STATE["DECEASED"]][-1] += 1
                             continue
 
                     if self._current_round - self._contamination_dates[x, y] == self._contagion_delay:
                         state[x, y] = STATE["IMMUNE"]
-                        self._counter[STATE["HOSPITALIZED"]] -= 1
-                        self._counter[STATE["IMMUNE"]] += 1
+                        self._counter[STATE["HOSPITALIZED"]][-1] -= 1
+                        self._counter[STATE["IMMUNE"]][-1] += 1
                         continue
 
                 if current_state[x, y] == STATE["INFECTED"]:
                     if self._current_round - self._contamination_dates[x, y] == self._hospitalized_delay:
                         if random() <= self._hospitalized_rate:
                             state[x, y] = STATE["HOSPITALIZED"]
-                            self._counter[STATE["INFECTED"]] -= 1
-                            self._counter[STATE["HOSPITALIZED"]] += 1
+                            self._counter[STATE["INFECTED"]][-1] -= 1
+                            self._counter[STATE["HOSPITALIZED"]][-1] += 1
                             continue
 
                     if self._current_round - self._contamination_dates[x, y] == self._quarantine_delay:
                         if random() <= self._quarantine_rate:
                             state[x, y] = STATE["QUARANTINE"]
-                            self._counter[STATE["INFECTED"]] -= 1
-                            self._counter[STATE["QUARANTINE"]] += 1
+                            self._counter[STATE["INFECTED"]][-1] -= 1
+                            self._counter[STATE["QUARANTINE"]][-1] += 1
                             continue
 
                     if self._current_round - self._contamination_dates[x, y] == self._contagion_delay:
                         state[x, y] = STATE["IMMUNE"]
-                        self._counter[STATE["INFECTED"]] -= 1
-                        self._counter[STATE["IMMUNE"]] += 1
+                        self._counter[STATE["INFECTED"]][-1] -= 1
+                        self._counter[STATE["IMMUNE"]][-1] += 1
                         continue
 
                     #
@@ -266,7 +291,7 @@ class DiseaseBoard:
                                 # tests avoids double counting
                                 if not state[nb[0], nb[1]] == STATE["INFECTED"]:
                                     state[nb[0], nb[1]] = STATE["INFECTED"]
-                                    self._counter[STATE["INFECTED"]] += 1
+                                    self._counter[STATE["INFECTED"]][-1] += 1
 
         self._state_db.append(state)
         self._current_round += 1
@@ -275,4 +300,3 @@ class DiseaseBoard:
 
     def lastBoard(self):
         return self._state_db[-1]
-
