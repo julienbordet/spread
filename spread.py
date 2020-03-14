@@ -297,6 +297,9 @@ class MainWindow(QMainWindow):
         self.diseaseBoard.immunityRate = self.qLocale.toDouble(
             self.confgrid.itemAtPosition(IMMUNITY_RATE_PARAM, 1).widget().text())[0]
 
+        self.diseaseBoard.clusterNbr = self.qLocale.toInt(
+            self.confgrid.itemAtPosition(CLUSTER_NB_PARAM, 1).widget().text())[0]
+
         self.diseaseBoard.reset(self.nb_tours_init)
         self.nb_tours = self.nb_tours_init
         self.nb_toursLabel.setText("%03d" % self.nb_tours)
