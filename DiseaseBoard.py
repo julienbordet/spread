@@ -32,7 +32,7 @@ class DiseaseBoard:
         self._hospitalized_delay = 2
 
         self._quarantine_rate = 0.2
-        self._quarantine_delay = 2
+        self._diagnosis_delay = 2
 
         # Par défaut, R0 = 3, et il y a 8 cases adjacentes
         self._contagion_rate = 1 / 8
@@ -85,12 +85,12 @@ class DiseaseBoard:
         self._quarantine_rate = taux_quarantaine
 
     @property
-    def quarantineDelay(self):
-        return self._quarantine_delay
+    def diagnosisDelay(self):
+        return self._diagnosis_delay
 
-    @quarantineDelay.setter
-    def quarantineDelay(self, delai_quarantaine):
-        self._quarantine_delay = delai_quarantaine
+    @diagnosisDelay.setter
+    def diagnosisDelay(self, delai_quarantaine):
+        self._diagnosis_delay = delai_quarantaine
 
     @property
     def contagionDelay(self):
@@ -151,6 +151,10 @@ class DiseaseBoard:
     @property
     def hospitalizedNbr(self):
         return self._counter[STATE["HOSPITALIZED"]][-1]
+
+    @property
+    def quarantinedNbr(self):
+        return self._counter[STATE["QUARANTINE"]][-1]
 
     @property
     def R0(self):
@@ -218,6 +222,13 @@ class DiseaseBoard:
                         self._counter[STATE["IMMUNE"]][-1] += 1
                         continue
 
+                    if self._current_round - self._contamination_dates[x, y] == self._hospitalized_delay:
+                        if random() <= self._hospitalized_rate:
+                            state[x, y] = STATE["HOSPITALIZED"]
+                            self._counter[STATE["QUARANTINE"]][-1] -= 1
+                            self._counter[STATE["HOSPITALIZED"]][-1] += 1
+                            continue
+
                 if current_state[x, y] == STATE["HOSPITALIZED"]:
                     if self._current_round - self._contamination_dates[x, y] == self._death_delay:
                         if random() <= self._death_rate / self._hospitalized_rate:
@@ -233,18 +244,18 @@ class DiseaseBoard:
                         continue
 
                 if current_state[x, y] == STATE["INFECTED"]:
+                    if self._current_round - self._contamination_dates[x, y] == self._diagnosis_delay:
+                        if random() <= self._quarantine_rate:
+                            state[x, y] = STATE["QUARANTINE"]
+                            self._counter[STATE["INFECTED"]][-1] -= 1
+                            self._counter[STATE["QUARANTINE"]][-1] += 1
+                            continue
+
                     if self._current_round - self._contamination_dates[x, y] == self._hospitalized_delay:
                         if random() <= self._hospitalized_rate:
                             state[x, y] = STATE["HOSPITALIZED"]
                             self._counter[STATE["INFECTED"]][-1] -= 1
                             self._counter[STATE["HOSPITALIZED"]][-1] += 1
-                            continue
-
-                    if self._current_round - self._contamination_dates[x, y] == self._quarantine_delay:
-                        if random() <= self._quarantine_rate:
-                            state[x, y] = STATE["QUARANTINE"]
-                            self._counter[STATE["INFECTED"]][-1] -= 1
-                            self._counter[STATE["QUARANTINE"]][-1] += 1
                             continue
 
                     if self._current_round - self._contamination_dates[x, y] == self._contagion_delay:

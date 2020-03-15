@@ -35,6 +35,7 @@ It is also assumed (ie simplified) that
 
 - contagion state and infected state are the same state : as soon as a patient has recovered, he is not contagious anymore, and vice-versa
 - every patient died in hospital, that is no critical case is ignored to point to ignore hospitalization
+- patient in quarantine can end up at the hospital if the delay between infection and severe symptom is higher than the diagnosis delay
 
 
 ## Usage

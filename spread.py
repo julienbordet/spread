@@ -31,10 +31,10 @@ TRANSMISSION_RATE_PARAM = 2
 MORTALITY_RATE_PARAM = 3
 MORTALITY_DELAY_PARAM = 4
 CONTAGION_DELAY_PARAM = 5
-HOSPITALIZED_RATE_PARAM = 6
-HOSPITALIZED_DELAY_PARAM = 7
-QUARANTINE_RATE_PARAM = 8
-QUARANTINE_DELAY_PARAM = 9
+QUARANTINE_RATE_PARAM = 6
+DIAGNOSIS_DELAY_PARAM = 7
+HOSPITALIZED_RATE_PARAM = 8
+HOSPITALIZED_DELAY_PARAM = 9
 
 CONF_ELEMENTS = {
     IMMUNITY_RATE_PARAM: (("Tx Immunité", "Immunity Rate"), "double"),
@@ -43,10 +43,10 @@ CONF_ELEMENTS = {
     MORTALITY_RATE_PARAM: (("Tx mortalité", "Death Rate"), "double"),
     MORTALITY_DELAY_PARAM: (("Délai mortalité", "Death Delay"), "int"),
     CONTAGION_DELAY_PARAM: (("Délai contagion", "Contagion Delay"), "int"),
+    QUARANTINE_RATE_PARAM: (("Tx diag / mise quarantaine", "Diagnosis / Quarantine Rate"), "double"),
     HOSPITALIZED_RATE_PARAM: (("Tx hospitalisation", "Hospitalization Rate"), "int"),
     HOSPITALIZED_DELAY_PARAM: (("Délai hospitalisation", "Hospitalization Delay"), "int"),
-    QUARANTINE_RATE_PARAM: (("Tx mise quarantaine", "Quarantine Rate"), "double"),
-    QUARANTINE_DELAY_PARAM: (("Délai mise quarantaine", "Quarantine Delay"), "int")
+    DIAGNOSIS_DELAY_PARAM: (("Délai diagnostic", "Diagnosis Delay"), "int")
 }
 
 LANG_FR = 0
@@ -201,7 +201,7 @@ class MainWindow(QMainWindow):
         graphLayout.addWidget(graphWidget)
 
         self.plots = [None] * PLOT_NB
-        self.plots[INFECTED_PLOT] = graphWidget.plot([],[], pen=pg.mkPen(color = (255,0,0), width=3), name="infected")
+        self.plots[INFECTED_PLOT] = graphWidget.plot([],[], pen=pg.mkPen(color = (255,0,0), width=3), name="infected 'on the road'")
         self.plots[HOSPITALIZED_PLOT] = graphWidget.plot([],[], pen=pg.mkPen(color=(100,110,200), width=3), name="hospitalized")
         self.plots[QUARANTINED_PLOT] = graphWidget.plot([],[], pen=pg.mkPen(color=(255,255,0), width=3), name="quarantined")
         graphWidget.addLegend()
@@ -276,8 +276,8 @@ class MainWindow(QMainWindow):
                 qle.setText(self.qLocale.toString(self.diseaseBoard.hospitalizedDelay))
             elif param == QUARANTINE_RATE_PARAM:
                 qle.setText(self.qLocale.toString(self.diseaseBoard.quarantineRate, precision=2))
-            elif param == QUARANTINE_DELAY_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.quarantineDelay))
+            elif param == DIAGNOSIS_DELAY_PARAM:
+                qle.setText(self.qLocale.toString(self.diseaseBoard.diagnosisDelay))
 
             if data[1] == "double":
                 qle.setValidator(QDoubleValidator(0.0, 1.0, 2))
@@ -337,8 +337,8 @@ class MainWindow(QMainWindow):
                 self.confgrid.itemAtPosition(MORTALITY_DELAY_PARAM, 1).widget().text())[0]
             self.diseaseBoard.quarantineRate = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(QUARANTINE_RATE_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.quarantineDelay = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(QUARANTINE_DELAY_PARAM, 1).widget().text())[0]
+            self.diseaseBoard.diagnosisDelay = self.qLocale.toDouble(
+                self.confgrid.itemAtPosition(DIAGNOSIS_DELAY_PARAM, 1).widget().text())[0]
 
         if self.status == STATUS_STOPPED:
             self.status = STATUS_PLAYING
@@ -384,7 +384,8 @@ class MainWindow(QMainWindow):
     def updateTimer(self):
         if self.status == STATUS_PLAYING:
 
-            if self.diseaseBoard.currentRound + 1 > self.total_round_nbr:
+            if self.diseaseBoard.currentRound + 1 > self.total_round_nbr or \
+                        (self.diseaseBoard.sickNbr == 0 and self.diseaseBoard.quarantinedNbr == 0):
                 self.status = STATUS_STOPPED
                 for i in range(self.confgrid.rowCount()):
                     self.confgrid.itemAtPosition(i,1).widget().setReadOnly(False)
@@ -449,14 +450,15 @@ if __name__ == '__main__':
             pass
 
     db = DiseaseBoard(board_size, tours, nb_clusters)
-    db.immunityRate = 0.4
+    db.immunityRate = 0.0
     # Entre 2 et 3 personnes contaminées par malade, si on considère qu'à chaque tour (a peu près un jour), on
     # a l'occasion de contaminer environ 15 personnes, et ce pendant la durée de la contamination, considérée comme
     # égale au délai de rétablissement
 
-    db.contagionDelay = 7
-    db.contagionRate = 2 / 7
-    db.quarantineDelay = 6
+    db.contagionDelay = 14
+    db.contagionRate = 2 / 13
+    db.diagnosisDelay = 3
+    db.hospitalizedDelay = 4
     db.quarantineRate = 0.8
 
     app = QApplication([])
