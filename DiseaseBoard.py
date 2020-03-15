@@ -23,8 +23,6 @@ class DiseaseBoard:
 
         self._cluster_nbr = cluster_nbr
 
-        self._round_nbr = round_nbr
-
         self._immunity_rate = 0.2
 
         self._death_rate = 0.03
@@ -40,7 +38,7 @@ class DiseaseBoard:
         self._contagion_rate = 1 / 8
         self._contagion_delay = 3
 
-        self.reset(round_nbr)
+        self.reset()
 
     #########################
     # Gestion des attributs #
@@ -185,10 +183,9 @@ class DiseaseBoard:
             self._state_db.append(etat0)
             self._counter[STATE["INFECTED"]][self._current_round] += 1 # _current_round should be 0 as we init the board
 
-    def reset(self, nb_tours):
+    def reset(self):
         self._state_db = []
         self._contamination_dates = np.zeros((self._length, self._width), dtype=int)
-        self._round_nbr = nb_tours
         self._current_round = 0
 
         self._counter = []
