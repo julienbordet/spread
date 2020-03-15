@@ -158,6 +158,10 @@ class DiseaseBoard:
     def R0(self):
         return (self._contagion_rate * self._contagion_delay)
 
+    @property
+    def currentRound(self):
+        return self._current_round
+
     ###################################
     # Fin de la gestion des attributs #
     ###################################

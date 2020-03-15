@@ -127,7 +127,6 @@ class MainWindow(QMainWindow):
         self.board_size = newboard_size
         self.diseaseBoard = dB
         self.total_round_nbr = round_nbr
-        self.round_nbr = 0
 
         # w est le Widge QT affiché dans la fenêtre
         w = QWidget()
@@ -138,7 +137,7 @@ class MainWindow(QMainWindow):
 
         self.nb_toursLabel = QLabel()
         self.nb_toursLabel.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        self.nb_toursLabel.setText("%03d" % self.round_nbr)
+        self.nb_toursLabel.setText("%03d" % 0)
 
         self._timer = QTimer()
         self._timer.timeout.connect(self.updateTimer)
@@ -316,12 +315,13 @@ class MainWindow(QMainWindow):
 
         self.deceasedLabel.setText("#Deceased = " + self.qLocale.toString(self.diseaseBoard.deceasedNbr))
 
-        self.plots[INFECTED_PLOT].setData(range(0, self.round_nbr + 1), self.diseaseBoard.infectedData)
-        self.plots[HOSPITALIZED_PLOT].setData(range(0, self.round_nbr + 1), self.diseaseBoard.hospitalizedData)
-        self.plots[QUARANTINED_PLOT].setData(range(0, self.round_nbr + 1), self.diseaseBoard.quarantinedData)
+        round_nbr = self.diseaseBoard.currentRound
+        self.plots[INFECTED_PLOT].setData(range(0, round_nbr + 1), self.diseaseBoard.infectedData)
+        self.plots[HOSPITALIZED_PLOT].setData(range(0, round_nbr + 1), self.diseaseBoard.hospitalizedData)
+        self.plots[QUARANTINED_PLOT].setData(range(0, round_nbr + 1), self.diseaseBoard.quarantinedData)
 
     def goButtonPressed(self):
-        if (self.round_nbr == 0):
+        if (self.diseaseBoard.currentRound == 0):
             # Reconfiguration de la simulation
             self.diseaseBoard.contagionRate = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(TRANSMISSION_RATE_PARAM, 1).widget().text())[0]
@@ -358,14 +358,12 @@ class MainWindow(QMainWindow):
                 self.confgrid.itemAtPosition(i, 1).widget().repaint()
 
     def nextButtonPressed(self):
-        self.round_nbr += 1
-
-        if self.round_nbr > self.total_round_nbr:
+        if self.diseaseBoard.currentRound + 1 > self.total_round_nbr:
             self.status = STATUS_STOPPED
             return
 
-        self.nb_toursLabel.setText("%03d" % self.round_nbr)
         etat = self.diseaseBoard.nextRound()
+        self.nb_toursLabel.setText("%03d" % self.diseaseBoard.currentRound)
         self.updateMapAndFooter(etat)
         self.grid.update()
 
@@ -377,8 +375,7 @@ class MainWindow(QMainWindow):
             self.confgrid.itemAtPosition(CLUSTER_NB_PARAM, 1).widget().text())[0]
 
         self.diseaseBoard.reset(self.total_round_nbr)
-        self.round_nbr = 0
-        self.nb_toursLabel.setText("%03d" % self.round_nbr)
+        self.nb_toursLabel.setText("%03d" % 0)
         self.updateMapAndFooter(self.diseaseBoard.lastBoard())
 
         self.goButton.setText("GO")
@@ -386,9 +383,8 @@ class MainWindow(QMainWindow):
 
     def updateTimer(self):
         if self.status == STATUS_PLAYING:
-            self.round_nbr += 1
 
-            if self.round_nbr > self.total_round_nbr:
+            if self.diseaseBoard.currentRound + 1 > self.total_round_nbr:
                 self.status = STATUS_STOPPED
                 for i in range(self.confgrid.rowCount()):
                     self.confgrid.itemAtPosition(i,1).widget().setReadOnly(False)
@@ -397,7 +393,7 @@ class MainWindow(QMainWindow):
 
                 return
 
-            self.nb_toursLabel.setText("%03d" % self.round_nbr)
+            self.nb_toursLabel.setText("%03d" % self.diseaseBoard.currentRound)
             etat = self.diseaseBoard.nextRound()
             self.updateMapAndFooter(etat)
 
