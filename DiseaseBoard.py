@@ -38,6 +38,10 @@ class DiseaseBoard:
         self._contagion_rate = 1 / 8
         self._contagion_delay = 3
 
+        # No social Distancing by default
+        self._socialDistancingDelay = -1
+        self._socialDistancingContagionRate = 0
+
         self.reset()
 
     #########################
@@ -93,6 +97,14 @@ class DiseaseBoard:
         self._diagnosis_delay = delai_quarantaine
 
     @property
+    def deceasedDelay(self):
+        return self._death_delay
+
+    @deceasedDelay.setter
+    def deceasedDelay(self, death_delay):
+        self._death_delay = death_delay
+
+    @property
     def contagionDelay(self):
         return self._contagion_delay
 
@@ -146,7 +158,12 @@ class DiseaseBoard:
 
     @property
     def sickNbr(self):
-        return self._counter[STATE["INFECTED"]][-1] + self._counter[STATE["HOSPITALIZED"]][-1]
+        return self._counter[STATE["INFECTED"]][-1] + self._counter[STATE["HOSPITALIZED"]][-1] + \
+                self._counter[STATE["QUARANTINE"]][-1]
+
+    @property
+    def diagnosedNbr(self):
+        return self._counter[STATE["HOSPITALIZED"]][-1] + self._counter[STATE["QUARANTINE"]][-1]
 
     @property
     def hospitalizedNbr(self):
@@ -163,6 +180,26 @@ class DiseaseBoard:
     @property
     def currentRound(self):
         return self._current_round
+
+    @property
+    def population(self):
+        return self._width * self._length
+
+    @property
+    def socialDistancingDelay(self):
+        return self._socialDistancingDelay
+
+    @socialDistancingDelay.setter
+    def socialDistancingDelay(self, new_delay):
+        self._socialDistancingDelay = new_delay
+
+    @property
+    def socialDistancingContagionRate(self):
+        return self._socialDistancingContagionRate
+
+    @socialDistancingContagionRate.setter
+    def socialDistancingContagionRate(self, new_rate):
+        self._socialDistancingContagionRate = new_rate
 
     ###################################
     # Fin de la gestion des attributs #
@@ -185,7 +222,7 @@ class DiseaseBoard:
             self._contamination_dates[x0, y0] = -1
 
             self._state_db.append(etat0)
-            self._counter[STATE["INFECTED"]][self._current_round] += 1 # _current_round should be 0 as we init the board
+            self._counter[STATE["INFECTED"]][0] += 1
 
     def reset(self):
         self._state_db = []
@@ -208,6 +245,10 @@ class DiseaseBoard:
         neighbours = []
         current_state = self._state_db[-1]
         state = current_state.copy()
+
+        # social distancing effect
+        if self._current_round == self._socialDistancingDelay:
+            self._contagion_rate = self._socialDistancingContagionRate
 
         # We init the next round data with the same data as previous round
         for n in range(len(STATE.items())):

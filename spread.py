@@ -35,6 +35,8 @@ QUARANTINE_RATE_PARAM = 6
 DIAGNOSIS_DELAY_PARAM = 7
 HOSPITALIZED_RATE_PARAM = 8
 HOSPITALIZED_DELAY_PARAM = 9
+SOCIALDISTANCING_RATE_PARAM = 10
+SOCIALDISTANCING_DELAY_PARAM = 11
 
 CONF_ELEMENTS = {
     IMMUNITY_RATE_PARAM: (("Tx Immunité", "Immunity Rate"), "double"),
@@ -46,7 +48,9 @@ CONF_ELEMENTS = {
     QUARANTINE_RATE_PARAM: (("Tx diag / mise quarantaine", "Diagnosis / Quarantine Rate"), "double"),
     HOSPITALIZED_RATE_PARAM: (("Tx hospitalisation", "Hospitalization Rate"), "int"),
     HOSPITALIZED_DELAY_PARAM: (("Délai hospitalisation", "Hospitalization Delay"), "int"),
-    DIAGNOSIS_DELAY_PARAM: (("Délai diagnostic", "Diagnosis Delay"), "int")
+    DIAGNOSIS_DELAY_PARAM: (("Délai diagnostic", "Diagnosis Delay"), "int"),
+    SOCIALDISTANCING_RATE_PARAM: (("Taux post soc. dist", "Post soc. dist rate"), "double"),
+    SOCIALDISTANCING_DELAY_PARAM: (("Délai pour soc. dist", "Soc. dist delay"), "int")
 }
 
 LANG_FR = 0
@@ -219,7 +223,7 @@ class MainWindow(QMainWindow):
 
         footerLayout = QHBoxLayout()
 
-        popLabel = QLabel("Pop = " + self.qLocale.toString(board_size * self.board_size))
+        popLabel = QLabel("Pop = " + self.qLocale.toString(self.diseaseBoard.population))
         popLabel.setStyleSheet("color: grey")
         footerLayout.addWidget(popLabel)
 
@@ -228,7 +232,12 @@ class MainWindow(QMainWindow):
         self.r0Label = r0Label
         footerLayout.addWidget(r0Label)
 
-        deceasedLabel = QLabel("#Death = " + self.qLocale.toString(self.diseaseBoard.R0))
+        ratioLabel = QLabel("#infected / #detected = 1")
+        ratioLabel.setStyleSheet("color: grey")
+        self.ratioLabel = ratioLabel
+        footerLayout.addWidget(ratioLabel)
+
+        deceasedLabel = QLabel("#Death = " + self.qLocale.toString(self.diseaseBoard.deceasedNbr))
         deceasedLabel.setStyleSheet("color: grey")
         self.deceasedLabel = deceasedLabel
         footerLayout.addWidget(deceasedLabel)
@@ -278,6 +287,10 @@ class MainWindow(QMainWindow):
                 qle.setText(self.qLocale.toString(self.diseaseBoard.quarantineRate, precision=2))
             elif param == DIAGNOSIS_DELAY_PARAM:
                 qle.setText(self.qLocale.toString(self.diseaseBoard.diagnosisDelay))
+            elif param == SOCIALDISTANCING_DELAY_PARAM:
+                qle.setText(self.qLocale.toString(self.diseaseBoard.socialDistancingDelay))
+            elif param == SOCIALDISTANCING_RATE_PARAM:
+                qle.setText(self.qLocale.toString(self.diseaseBoard.socialDistancingContagionRate, precision=2))
 
             if data[1] == "double":
                 qle.setValidator(QDoubleValidator(0.0, 1.0, 2))
@@ -300,20 +313,23 @@ class MainWindow(QMainWindow):
                 self.grid.addWidget(w, x, y)
                 w.redraw(etat[x, y])
 
-    def updateMapAndFooter(self, etat):
+    def updateMap(self, etat):
         # Add positions to the map
         for x in range(0, self.board_size):
             for y in range(0, self.board_size):
                 w = self.grid.itemAtPosition(x, y).widget()
                 w.redraw(etat[x, y])
 
-        self.updateR0()
-
         self.infectedLabel.setText("#Sick = " + self.qLocale.toString(self.diseaseBoard.sickNbr) +
                                    " (inc #Hospit. = " +
                                    self.qLocale.toString(self.diseaseBoard.hospitalizedNbr) + ")")
 
         self.deceasedLabel.setText("#Deceased = " + self.qLocale.toString(self.diseaseBoard.deceasedNbr))
+        if self.diseaseBoard.diagnosedNbr != 0:
+            self.ratioLabel.setText("#infected / #detected = " + \
+                                    self.qLocale.toString(self.diseaseBoard.sickNbr / self.diseaseBoard.diagnosedNbr))
+        else:
+            self.ratioLabel.setText("#infected / #detected = N/A")
 
         round_nbr = self.diseaseBoard.currentRound
         self.plots[INFECTED_PLOT].setData(range(0, round_nbr + 1), self.diseaseBoard.infectedData)
@@ -339,6 +355,10 @@ class MainWindow(QMainWindow):
                 self.confgrid.itemAtPosition(QUARANTINE_RATE_PARAM, 1).widget().text())[0]
             self.diseaseBoard.diagnosisDelay = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(DIAGNOSIS_DELAY_PARAM, 1).widget().text())[0]
+            self.diseaseBoard.socialDistancingDelay = self.qLocale.toInt(
+                self.confgrid.itemAtPosition(SOCIALDISTANCING_DELAY_PARAM, 1).widget().text())[0]
+            self.diseaseBoard.socialDistancingContagionRate = self.qLocale.toDouble(
+                self.confgrid.itemAtPosition(SOCIALDISTANCING_RATE_PARAM, 1).widget().text())[0]
 
         if self.status == STATUS_STOPPED:
             self.status = STATUS_PLAYING
@@ -364,7 +384,8 @@ class MainWindow(QMainWindow):
 
         etat = self.diseaseBoard.nextRound()
         self.nb_toursLabel.setText("%03d" % self.diseaseBoard.currentRound)
-        self.updateMapAndFooter(etat)
+        self.updateMap(etat)
+        self.updateR0()
         self.grid.update()
 
     def resetButtonPressed(self):
@@ -376,7 +397,8 @@ class MainWindow(QMainWindow):
 
         self.diseaseBoard.reset()
         self.nb_toursLabel.setText("%03d" % 0)
-        self.updateMapAndFooter(self.diseaseBoard.lastBoard())
+        self.updateMap(self.diseaseBoard.lastBoard())
+        self.updateR0()
 
         self.goButton.setText("GO")
         self.status = STATUS_STOPPED
@@ -396,13 +418,10 @@ class MainWindow(QMainWindow):
 
             self.nb_toursLabel.setText("%03d" % self.diseaseBoard.currentRound)
             etat = self.diseaseBoard.nextRound()
-            self.updateMapAndFooter(etat)
+            self.updateMap(etat)
+            self.updateR0()
 
     def updateR0(self):
-        self.diseaseBoard.contagionRate = self.qLocale.toDouble(
-            self.confgrid.itemAtPosition(TRANSMISSION_RATE_PARAM, 1).widget().text())[0]
-        self.diseaseBoard.contagionDelay = self.qLocale.toDouble(
-            self.confgrid.itemAtPosition(CONTAGION_DELAY_PARAM, 1).widget().text())[0]
         self.r0Label.setText("R0 = {:.3} ".format(self.diseaseBoard.R0))
 
 def usage():
@@ -457,9 +476,13 @@ if __name__ == '__main__':
 
     db.contagionDelay = 14
     db.contagionRate = 2 / 13
-    db.diagnosisDelay = 3
-    db.hospitalizedDelay = 4
-    db.quarantineRate = 0.8
+    db.diagnosisDelay = 5
+    db.hospitalizedDelay = 5
+    db.quarantineRate = 0.5
+
+    db.socialDistancingDelay = 10
+    db.socialDistancingContagionRate = db.contagionRate / 3
+
 
     app = QApplication([])
     window = MainWindow(board_size, tours, db)
