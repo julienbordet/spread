@@ -18,9 +18,13 @@ STATE = {
     "INFECTED": 1,
     "IMMUNE": 2,
     "QUARANTINE": 3,
-    "HOSPITALIZED": 5,
-    "DECEASED": 4
+    "DECEASED": 4,
+    "HOSPITALIZED": 5
 }
+
+STATE_NAME = [ ("Susceptible", "Susceptible"), ("Infecté", "Infected"),
+               ("Immunisé", "Immune"), ("Quarantaine", "Quarantine"),
+               ("Décédé", "Deceased"), ("Hospitalisé", "Hospitalized")]
 
 STATUS_PLAYING = 1
 STATUS_STOPPED = 0
@@ -66,13 +70,21 @@ class Pos(QWidget):
     clicked = pyqtSignal()
     ohno = pyqtSignal()
 
-    def __init__(self, x, y, *args, **kwargs):
+    # stores floating label list, as we might miss some leaveEvent, we need a way to hide them all
+    activeLabelList = []
+
+    def __init__(self, x, y, lang, *args, **kwargs):
         super(Pos, self).__init__(*args, **kwargs)
 
         self.setFixedSize(QSize(10, 10))
 
         self.x = x
         self.y = y
+        self.lang = lang
+
+        self.floatingLabel = QLabel()
+        self.floatingLabel.setWindowFlags(Qt.FramelessWindowHint)
+        self.floatingLabel.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
 
     def redraw(self, state):
         self._state = state
@@ -113,6 +125,32 @@ class Pos(QWidget):
 
     def mouseReleaseEvent(self, e):
         pass
+
+    def enterEvent(self, event):
+        if event.type() == QEvent.Enter and not self.floatingLabel.isVisible():
+            self.cleanFloatingLabel()
+
+            position = QCursor.pos()
+            position += QPoint(0, -20)  # Move the floating label up to improve its visibility
+            labelText = STATE_NAME[self._state][self.lang]
+            self.floatingLabel.setText(labelText)
+            self.floatingLabel.move(position)
+
+            self.floatingLabel.setVisible(True)
+            self.floatingLabel.update()
+
+            Pos.activeLabelList.append(self.floatingLabel)
+
+    def leaveEvent(self, event):
+        if event.type() == QEvent.Leave:
+            self.cleanFloatingLabel()
+
+    def cleanFloatingLabel(self):
+        for i, label in enumerate(Pos.activeLabelList):
+            label.setVisible(False)
+            label.update()
+
+        Pos.activeLabelList = []
 
 
 class MainWindow(QMainWindow):
@@ -309,7 +347,7 @@ class MainWindow(QMainWindow):
         # Add positions to the map
         for x in range(0, self.board_size):
             for y in range(0, self.board_size):
-                w = Pos(x, y)
+                w = Pos(x, y, self.lang)
                 self.grid.addWidget(w, x, y)
                 w.redraw(etat[x, y])
 
@@ -480,7 +518,7 @@ if __name__ == '__main__':
     db.hospitalizedDelay = 5
     db.quarantineRate = 0.5
 
-    db.socialDistancingDelay = 10
+    db.socialDistancingDelay = -1
     db.socialDistancingContagionRate = db.contagionRate / 3
 
 
