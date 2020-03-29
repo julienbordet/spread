@@ -74,6 +74,20 @@ At the end of each simulation, the user that change the parameters as he likes, 
 
 *See Issues in GitHub page*
 
-## Bugs
+## Significant bugs with associated libraries
 
 Right now there is a bug on Mac OS Mojave that seems to prevent Qt5 from having a nice display behavior. That may result in pressing the "RESET" button having no visual effect. However, the modelisation effectively starts when pressing the "GO" button. This does not happen on Windows.
+
+On **Windows and Python 3.8**, there is a bug with the pyqtgraph 0.10.0 library, that causes the error 
+
+```{console}    
+File "C:\Program Files\Python38\lib\site-packages\pyqtgraph\ptime.py", line 24, in <module>
+    cstart = systime.clock()  ### Required to start the clock in windows
+```
+
+Instead of installing the normal pygtgraph, please use 
+
+```{console}    
+pip install git+https://github.com/pyqtgraph/pyqtgraph@develop
+```
+ 
