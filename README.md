@@ -16,6 +16,24 @@ $ brew install qt
 $ sudo apt-get install qt5-default
 ```
 
+## Install required Python library
+
+```
+$ cd spread
+$ python3 -m venv venv
+$ . ./venv/bin/activate
+$ python3 setup.py install
+```
+
+## Launch spread
+
+```
+"""Usage: spread [options] round_number board_size cluster_number
+            round_number: number of rounds for the simulation
+            board_size: size of the board
+            cluster_number: number of initial board disease clusters""")
+```
+
 ## Introduction
 Spread is a small python script that creates a simple model for disease spreading among a population. The idea is to be able to watch the effects of the variation for several key parameters. It takes into account :
 
