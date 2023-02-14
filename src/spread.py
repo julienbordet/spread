@@ -11,7 +11,7 @@ import sys
 import getopt
 from typing import Optional, Union, cast
 
-from DiseaseBoard import DiseaseBoard
+from DiseaseBoard import DiseaseBoard, BoardState
 
 DEFAULT_BOARD_SIZE = 50
 DEFAULT_TOUR = 5
@@ -76,10 +76,8 @@ PARAM_TO_PROPERTY = {
 
 PROPERTY_TO_PARAM = { v: k for k, v in PARAM_TO_PROPERTY.items() }
 
-spread_lang = int
-
-LANG_FR: spread_lang = 0
-LANG_US: spread_lang = 1
+LANG_FR: int = 0
+LANG_US: int = 1
 
 INFECTED_PLOT = 0
 HOSPITALIZED_PLOT = 1
@@ -95,19 +93,21 @@ class Pos(QWidget):
     # stores floating label list, as we might miss some leaveEvent, we need a way to hide them all
     activeLabelList: list = []
 
-    def __init__(self, lang: spread_lang, *args, **kwargs) -> None:
+    def __init__(self, lang: int, *args, **kwargs) -> None:
         super(Pos, self).__init__(*args, **kwargs)
 
         self.setFixedSize(QSize(10, 10))
 
-        self.lang: spread_lang = lang
+        self.lang: int = lang
 
         self.floatingLabel: QLabel = QLabel()
         self.floatingLabel.setWindowFlags(Qt.FramelessWindowHint)
         self.floatingLabel.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
 
-    def redraw(self, state) -> None:
-        self._state = state
+        self.patient_state: Optional[int] = None
+
+    def redraw(self, state: int) -> None:
+        self.patient_state = state
         self.update()
 
     def paintEvent(self, event) -> None:
@@ -119,18 +119,18 @@ class Pos(QWidget):
         outer: Optional[Union[QColor, Qt.GlobalColor]] = None
         inner: Optional[Union[QColor, Qt.GlobalColor]] = None
 
-        if self._state == STATE["SUSCEPTIBLE"]:
+        if self.patient_state == STATE["SUSCEPTIBLE"]:
             blueColor: QColor = QColor(210, 210, 255)
             outer, inner = blueColor, blueColor
-        elif self._state == STATE["INFECTED"]:
+        elif self.patient_state == STATE["INFECTED"]:
             outer, inner = Qt.darkRed, Qt.red
-        elif self._state == STATE["DECEASED"]:
+        elif self.patient_state == STATE["DECEASED"]:
             outer, inner = Qt.black, Qt.black
-        elif self._state == STATE["QUARANTINE"]:
+        elif self.patient_state == STATE["QUARANTINE"]:
             outer, inner = Qt.darkYellow, Qt.yellow
-        elif self._state == STATE["IMMUNE"]:
+        elif self.patient_state == STATE["IMMUNE"]:
             outer, inner = Qt.gray, Qt.lightGray
-        elif self._state == STATE["HOSPITALIZED"]:
+        elif self.patient_state == STATE["HOSPITALIZED"]:
             darkblueColor: QColor = QColor(100, 110, 200)
             outer, inner = darkblueColor, darkblueColor
 
@@ -158,7 +158,11 @@ class Pos(QWidget):
 
             position: QPoint = QCursor.pos()
             position += QPoint(0, -20)  # Move the floating label up to improve its visibility
-            labelText = STATE_NAME[self._state][self.lang]
+
+            if self.patient_state is None:
+                raise ValueError("Invalid patient state")
+
+            labelText = STATE_NAME[self.patient_state][self.lang]
             self.floatingLabel.setText(labelText)
             self.floatingLabel.move(position)
 
@@ -184,7 +188,7 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.setWindowTitle("spread : disease spread simple model")
 
-        self.lang: spread_lang
+        self.lang: int
 
         self.qLocale = QLocale()
         if self.qLocale.name()[0:2] == "fr":
@@ -360,21 +364,21 @@ class MainWindow(QMainWindow):
 
         return confgrid
 
-    def initMap(self, etat) -> None:
+    def initMap(self, bs: BoardState) -> None:
         # Add positions to the map
         for x in range(0, self.board_size):
             for y in range(0, self.board_size):
                 w = Pos(self.lang)
                 self.grid.addWidget(w, x, y)
-                w.redraw(etat[x, y])
+                w.redraw(bs[x, y])
 
-    def updateMap(self, etat) -> None:
+    def updateMap(self, bs: BoardState) -> None:
         # Add positions to the map
         for x in range(0, self.board_size):
             for y in range(0, self.board_size):
                 widget = self.grid.itemAtPosition(x, y).widget()
                 my_pos = cast(Pos, widget)
-                my_pos.redraw(etat[x, y])
+                my_pos.redraw(bs[x, y])
 
         infected_text = "#Sick = "
         infected_text += self.qLocale.toString(self.diseaseBoard.sick_nbr)
@@ -442,7 +446,7 @@ class MainWindow(QMainWindow):
             self.status = STATUS_STOPPED
             return
 
-        etat: np.ndarray = self.diseaseBoard.next_round()
+        etat: BoardState = self.diseaseBoard.next_round()
         self.nb_toursLabel.setText("%03d" % self.diseaseBoard.current_round)
         self.updateMap(etat)
         self.updateR0()
@@ -462,7 +466,9 @@ class MainWindow(QMainWindow):
         self.updateMap(self.diseaseBoard.last_board())
         self.updateR0()
 
-        self.goButton.setText("GO")
+        self.goButton.setStyleSheet("color: black; selection-color: black")
+        self.goButton.setText("LBAH")
+        self.goButton.repaint()
         self.status = STATUS_STOPPED
 
     def updateTimer(self) -> None:

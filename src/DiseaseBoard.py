@@ -3,6 +3,10 @@
 
 import numpy as np
 from random import random, randrange
+from typing import NewType, Any
+
+BoardState = NewType("BoardState", np.ndarray)
+
 
 # Couleur associée à l'état
 STATE = {
@@ -42,7 +46,7 @@ class DiseaseBoard:
         self._socialDistancingDelay: int = -1
         self._socialDistancingContagionRate: float = 0
 
-        self._state_db: list[np.ndarray] = []
+        self._state_db: list[BoardState] = []
         self._contamination_dates = np.zeros((self._length, self._width), dtype=int)
         self._current_round: int = 0
         self._counter: list = []
@@ -211,7 +215,7 @@ class DiseaseBoard:
     ###################################
 
     def init_board(self) -> None:
-        etat0: np.ndarray = np.zeros((self._length, self._width), dtype=int)
+        etat0: BoardState = BoardState(np.zeros((self._length, self._width), dtype=int))
         etat0[0:self._length, 0:self._width] = STATE["SUSCEPTIBLE"]
 
         # Creation de la population immunisée
@@ -238,14 +242,14 @@ class DiseaseBoard:
 
         self._current_round = 0
 
-    def next_round(self) -> np.ndarray:
+    def next_round(self) -> BoardState:
         """
         Create next round state
 
         :return: next round state
         """
         neighbours = []
-        current_state: np.ndarray = self._state_db[-1]
+        current_state: BoardState = self._state_db[-1]
         state = current_state.copy()
 
         # social distancing effect
@@ -353,5 +357,5 @@ class DiseaseBoard:
 
         return state
 
-    def last_board(self) -> np.ndarray:
+    def last_board(self) -> BoardState:
         return self._state_db[-1]
