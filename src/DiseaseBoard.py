@@ -3,6 +3,10 @@
 
 import numpy as np
 from random import random, randrange
+from typing import NewType
+
+BoardState = NewType("BoardState", np.ndarray)  # type: ignore
+
 
 # Couleur associée à l'état
 STATE = {
@@ -16,31 +20,36 @@ STATE = {
 
 
 class DiseaseBoard:
-    def __init__(self, size, round_nbr, cluster_nbr):
+    def __init__(self, size: int, cluster_nbr: int) -> None:
 
-        self._length = size
-        self._width = size
+        self._length: int = size
+        self._width: int = size
 
-        self._cluster_nbr = cluster_nbr
+        self._cluster_nbr: int = cluster_nbr
 
-        self._immunity_rate = 0.2
+        self._immunity_rate: float = 0.2
 
-        self._death_rate = 0.03
-        self._death_delay = 6
+        self._death_rate: float = 0.03
+        self._death_delay: int = 6
 
-        self._hospitalized_rate = 0.2
-        self._hospitalized_delay = 2
+        self._hospitalized_rate: float = 0.2
+        self._hospitalized_delay: int = 2
 
-        self._quarantine_rate = 0.2
-        self._diagnosis_delay = 2
+        self._quarantine_rate: float = 0.2
+        self._diagnosis_delay: int = 2
 
         # Par défaut, R0 = 3, et il y a 8 cases adjacentes
-        self._contagion_rate = 1 / 8
-        self._contagion_delay = 3
+        self._contagion_rate: float = 1 / 8
+        self._contagion_delay: int = 3
 
         # No social Distancing by default
-        self._socialDistancingDelay = -1
-        self._socialDistancingContagionRate = 0
+        self._socialDistancingDelay: int = -1
+        self._socialDistancingContagionRate: float = 0
+
+        self._state_db: list[BoardState] = []
+        self._contamination_dates = np.zeros((self._length, self._width), dtype=int)
+        self._current_round: int = 0
+        self._counter: list = []
 
         self.reset()
 
@@ -49,164 +58,164 @@ class DiseaseBoard:
     #########################
 
     @property
-    def immunityRate(self):
+    def immunity_rate(self) -> float:
         return self._immunity_rate
 
-    @immunityRate.setter
-    def immunityRate(self, taux_immunite):
+    @immunity_rate.setter
+    def immunity_rate(self, taux_immunite) -> None:
         self._immunity_rate = taux_immunite
 
     @property
-    def mortalityRate(self):
+    def mortality_rate(self) -> float:
         return self._death_rate
 
-    @mortalityRate.setter
-    def mortalityRate(self, taux_mortalite):
+    @mortality_rate.setter
+    def mortality_rate(self, taux_mortalite) -> None:
         self._death_rate = taux_mortalite
 
     @property
-    def mortalityDelay(self):
+    def mortality_delay(self) -> int:
         return self._death_delay
 
-    @mortalityDelay.setter
-    def mortalityDelay(self, delai_mortalite):
+    @mortality_delay.setter
+    def mortality_delay(self, delai_mortalite) -> None:
         self._death_delay = delai_mortalite
 
     @property
-    def contagionRate(self):
+    def contagion_rate(self) -> float:
         return self._contagion_rate
 
-    @contagionRate.setter
-    def contagionRate(self, proba_transmission):
+    @contagion_rate.setter
+    def contagion_rate(self, proba_transmission) -> None:
         self._contagion_rate = proba_transmission
 
     @property
-    def quarantineRate(self):
+    def quarantine_rate(self) -> float:
         return self._quarantine_rate
 
-    @quarantineRate.setter
-    def quarantineRate(self, taux_quarantaine):
+    @quarantine_rate.setter
+    def quarantine_rate(self, taux_quarantaine) -> None:
         self._quarantine_rate = taux_quarantaine
 
     @property
-    def diagnosisDelay(self):
+    def diagnosis_delay(self) -> int:
         return self._diagnosis_delay
 
-    @diagnosisDelay.setter
-    def diagnosisDelay(self, delai_quarantaine):
+    @diagnosis_delay.setter
+    def diagnosis_delay(self, delai_quarantaine) -> None:
         self._diagnosis_delay = delai_quarantaine
 
     @property
-    def deceasedDelay(self):
+    def deceased_delay(self) -> int:
         return self._death_delay
 
-    @deceasedDelay.setter
-    def deceasedDelay(self, death_delay):
+    @deceased_delay.setter
+    def deceased_delay(self, death_delay) -> None:
         self._death_delay = death_delay
 
     @property
-    def contagionDelay(self):
+    def contagion_delay(self) -> int:
         return self._contagion_delay
 
-    @contagionDelay.setter
-    def contagionDelay(self, delai_contagion):
+    @contagion_delay.setter
+    def contagion_delay(self, delai_contagion) -> None:
         self._contagion_delay = delai_contagion
 
     @property
-    def hospitalizedRate(self):
+    def hospitalized_rate(self) -> float:
         return self._hospitalized_rate
 
-    @hospitalizedRate.setter
-    def hospitalizedRate(self, hospitalized_rate):
+    @hospitalized_rate.setter
+    def hospitalized_rate(self, hospitalized_rate) -> None:
         self._hospitalized_rate = hospitalized_rate
 
     @property
-    def hospitalizedDelay(self):
+    def hospitalized_delay(self) -> int:
         return self._hospitalized_delay
 
-    @hospitalizedDelay.setter
-    def hospitalizedDelay(self, hospitalized_delay):
+    @hospitalized_delay.setter
+    def hospitalized_delay(self, hospitalized_delay) -> None:
         self._hospitalized_delay = hospitalized_delay
 
     @property
-    def clusterNbr(self):
+    def cluster_nbr(self) -> int:
         return self._cluster_nbr
 
-    @clusterNbr.setter
-    def clusterNbr(self, nb_clusters):
+    @cluster_nbr.setter
+    def cluster_nbr(self, nb_clusters) -> None:
         self._cluster_nbr = nb_clusters
 
     @property
-    def deceasedNbr(self):
+    def deceased_nbr(self) -> int:
         return self._counter[STATE["DECEASED"]][-1]
 
     @property
-    def deceasedData(self):
+    def deceased_data(self) -> list:
         return self._counter[STATE["DECEASED"]]
 
     @property
-    def infectedData(self):
+    def infected_data(self) -> list:
         return self._counter[STATE["INFECTED"]]
 
     @property
-    def quarantinedData(self):
+    def quarantined_data(self) -> list:
         return self._counter[STATE["QUARANTINE"]]
 
     @property
-    def hospitalizedData(self):
+    def hospitalized_data(self) -> list:
         return self._counter[STATE["HOSPITALIZED"]]
 
     @property
-    def sickNbr(self):
-        return self._counter[STATE["INFECTED"]][-1] + self._counter[STATE["HOSPITALIZED"]][-1] + \
-                self._counter[STATE["QUARANTINE"]][-1]
+    def sick_nbr(self) -> int:
+        states = ["INFECTED", "HOSPITALIZED", "QUARANTINE"]
+        return sum([self._counter[STATE[state]][-1] for state in states])
 
     @property
-    def diagnosedNbr(self):
+    def diagnosed_nbr(self) -> int:
         return self._counter[STATE["HOSPITALIZED"]][-1] + self._counter[STATE["QUARANTINE"]][-1]
 
     @property
-    def hospitalizedNbr(self):
+    def hospitalized_nbr(self) -> int:
         return self._counter[STATE["HOSPITALIZED"]][-1]
 
     @property
-    def quarantinedNbr(self):
+    def quarantined_nbr(self) -> int:
         return self._counter[STATE["QUARANTINE"]][-1]
 
     @property
-    def R0(self):
-        return (self._contagion_rate * self._contagion_delay)
+    def R0(self) -> float:
+        return self._contagion_rate * self._contagion_delay
 
     @property
-    def currentRound(self):
+    def current_round(self) -> int:
         return self._current_round
 
     @property
-    def population(self):
+    def population(self) -> int:
         return self._width * self._length
 
     @property
-    def socialDistancingDelay(self):
+    def social_distancing_delay(self) -> int:
         return self._socialDistancingDelay
 
-    @socialDistancingDelay.setter
-    def socialDistancingDelay(self, new_delay):
+    @social_distancing_delay.setter
+    def social_distancing_delay(self, new_delay) -> None:
         self._socialDistancingDelay = new_delay
 
     @property
-    def socialDistancingContagionRate(self):
+    def social_distancing_contagion_rate(self) -> float:
         return self._socialDistancingContagionRate
 
-    @socialDistancingContagionRate.setter
-    def socialDistancingContagionRate(self, new_rate):
+    @social_distancing_contagion_rate.setter
+    def social_distancing_contagion_rate(self, new_rate) -> None:
         self._socialDistancingContagionRate = new_rate
 
     ###################################
     # Fin de la gestion des attributs #
     ###################################
 
-    def initBoard(self):
-        etat0 = np.zeros((self._length, self._width), dtype=int)
+    def init_board(self) -> None:
+        etat0: BoardState = BoardState(np.zeros((self._length, self._width), dtype=int))
         etat0[0:self._length, 0:self._width] = STATE["SUSCEPTIBLE"]
 
         # Creation de la population immunisée
@@ -224,33 +233,31 @@ class DiseaseBoard:
             self._state_db.append(etat0)
             self._counter[STATE["INFECTED"]][0] += 1
 
-    def reset(self):
-        self._state_db = []
-        self._contamination_dates = np.zeros((self._length, self._width), dtype=int)
-        self._current_round = 0
-
+    def reset(self) -> None:
         self._counter = []
         for n in range(len(STATE.items())):
             self._counter.append([])
             self._counter[n].append(0)
 
-        self.initBoard()
+        self.init_board()
 
-    def nextRound(self):
+        self._current_round = 0
+
+    def next_round(self) -> BoardState:
         """
         Create next round state
 
         :return: next round state
         """
         neighbours = []
-        current_state = self._state_db[-1]
+        current_state: BoardState = self._state_db[-1]
         state = current_state.copy()
 
         # social distancing effect
         if self._current_round == self._socialDistancingDelay:
             self._contagion_rate = self._socialDistancingContagionRate
 
-        # We init the next round data with the same data as previous round
+        # We initialize the next round data with the same data as previous round
         for n in range(len(STATE.items())):
             self._counter[n].append(self._counter[n][-1])
 
@@ -351,5 +358,5 @@ class DiseaseBoard:
 
         return state
 
-    def lastBoard(self):
+    def last_board(self) -> BoardState:
         return self._state_db[-1]
