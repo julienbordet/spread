@@ -2,6 +2,12 @@
 
 ## Installation
 
+### Get package
+
+```
+$ git clone https://github.com/julienbordet/spread.git
+```
+
 ### Install qt
 
 #### macOS
