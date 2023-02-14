@@ -9,7 +9,7 @@ from PyQt5.QtCore import (pyqtSignal, QSize, QPoint, Qt, QEvent, QLocale, QTimer
 import pyqtgraph as pg
 import sys
 import getopt
-from typing import Optional, Union
+from typing import Optional, Union, cast
 
 from DiseaseBoard import DiseaseBoard
 
@@ -58,6 +58,23 @@ CONF_ELEMENTS = {
     SOCIALDISTANCING_RATE_PARAM: (("Taux post soc. dist", "Post soc. dist rate"), "double"),
     SOCIALDISTANCING_DELAY_PARAM: (("Délai pour soc. dist", "Soc. dist delay"), "int")
 }
+
+PARAM_TO_PROPERTY = {
+    IMMUNITY_RATE_PARAM: 'immunity_rate',
+    CLUSTER_NB_PARAM: 'cluster_nbr',
+    TRANSMISSION_RATE_PARAM: 'contagion_rate',
+    MORTALITY_RATE_PARAM: 'mortality_rate',
+    MORTALITY_DELAY_PARAM: 'mortality_delay',
+    CONTAGION_DELAY_PARAM: 'contagion_delay',
+    HOSPITALIZED_RATE_PARAM: 'hospitalized_rate',
+    HOSPITALIZED_DELAY_PARAM: 'hospitalized_delay',
+    QUARANTINE_RATE_PARAM: 'quarantine_rate',
+    DIAGNOSIS_DELAY_PARAM: 'diagnosis_delay',
+    SOCIALDISTANCING_DELAY_PARAM: 'social_distancing_delay',
+    SOCIALDISTANCING_RATE_PARAM: 'social_distancing_contagion_rate',
+}
+
+PROPERTY_TO_PARAM = { v: k for k, v in PARAM_TO_PROPERTY.items() }
 
 spread_lang = int
 
@@ -230,7 +247,7 @@ class MainWindow(QMainWindow):
         #
         # Panneau de configuration à gauche
         #
-        self.confgrid = self.setupConfGrid()
+        self.confgrid: QGridLayout = self.setupConfGrid()
 
         #
         # Principal grid pour l'affichage du diseaseBoard
@@ -319,32 +336,16 @@ class MainWindow(QMainWindow):
 
             qle = QLineEdit()
 
-            if param == IMMUNITY_RATE_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.immunity_rate, precision=2))
-            if param == CLUSTER_NB_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.cluster_nbr))
-            elif param == TRANSMISSION_RATE_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.contagion_rate, precision=2))
+            property = PARAM_TO_PROPERTY[param]
+            value = getattr(self.diseaseBoard, property)
+            if param in [IMMUNITY_RATE_PARAM, TRANSMISSION_RATE_PARAM, MORTALITY_RATE_PARAM,
+                         QUARANTINE_RATE_PARAM, SOCIALDISTANCING_RATE_PARAM]:
+                qle.setText(self.qLocale.toString(value, precision=2))
+            else:
+                qle.setText(self.qLocale.toString(value))
+
+            if param in [TRANSMISSION_RATE_PARAM, CONTAGION_DELAY_PARAM]:
                 qle.textChanged.connect(self.updateR0)
-            elif param == MORTALITY_RATE_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.mortality_rate, precision=2))
-            elif param == MORTALITY_DELAY_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.mortality_delay))
-            elif param == CONTAGION_DELAY_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.contagion_delay))
-                qle.textChanged.connect(self.updateR0)
-            elif param == HOSPITALIZED_RATE_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.hospitalized_rate))
-            elif param == HOSPITALIZED_DELAY_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.hospitalized_delay))
-            elif param == QUARANTINE_RATE_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.quarantine_rate, precision=2))
-            elif param == DIAGNOSIS_DELAY_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.diagnosis_delay))
-            elif param == SOCIALDISTANCING_DELAY_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.social_distancing_delay))
-            elif param == SOCIALDISTANCING_RATE_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.social_distancing_contagion_rate, precision=2))
 
             if data[1] == "double":
                 qle.setValidator(QDoubleValidator(0.0, 1.0, 2))
@@ -371,8 +372,9 @@ class MainWindow(QMainWindow):
         # Add positions to the map
         for x in range(0, self.board_size):
             for y in range(0, self.board_size):
-                w = self.grid.itemAtPosition(x, y).widget()
-                w.redraw(etat[x, y])
+                widget = self.grid.itemAtPosition(x, y).widget()
+                my_pos = cast(Pos, widget)
+                my_pos.redraw(etat[x, y])
 
         infected_text = "#Sick = "
         infected_text += self.qLocale.toString(self.diseaseBoard.sick_nbr)
@@ -401,45 +403,39 @@ class MainWindow(QMainWindow):
                                              self.diseaseBoard.quarantined_data)
 
     def goButtonPressed(self) -> None:
+        line_edit: QLineEdit
+
         if self.diseaseBoard.current_round == 0:
             # Reconfiguration de la simulation
-            self.diseaseBoard.contagion_rate = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(TRANSMISSION_RATE_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.mortality_rate = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(MORTALITY_RATE_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.contagion_delay = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(CONTAGION_DELAY_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.hospitalized_rate = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(HOSPITALIZED_RATE_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.hospitalized_delay = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(HOSPITALIZED_DELAY_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.mortality_delay = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(MORTALITY_DELAY_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.quarantine_rate = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(QUARANTINE_RATE_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.diagnosis_delay = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(DIAGNOSIS_DELAY_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.social_distancing_delay = self.qLocale.toInt(
-                self.confgrid.itemAtPosition(SOCIALDISTANCING_DELAY_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.social_distancing_contagion_rate = self.qLocale.toDouble(
-                self.confgrid.itemAtPosition(SOCIALDISTANCING_RATE_PARAM, 1).widget().text())[0]
+
+            for key, value in PROPERTY_TO_PARAM.items():
+                item = self.confgrid.itemAtPosition(value, 1)
+                if item is not None:
+                    line_edit = cast(QLineEdit, item.widget())
+                    setattr(self.diseaseBoard, key, self.qLocale.toDouble(line_edit.text())[0])
 
         if self.status == STATUS_STOPPED:
             self.status = STATUS_PLAYING
             self.goButton.setText("PAUSE")
 
             for i in range(self.confgrid.rowCount()):
-                self.confgrid.itemAtPosition(i, 1).widget().setReadOnly(True)
-                self.confgrid.itemAtPosition(i, 1).widget().setStyleSheet("color: grey; selection-color: grey")
-                self.confgrid.itemAtPosition(i, 1).widget().repaint()
+                widget = self.confgrid.itemAtPosition(i, 1).widget()
+
+                line_edit = cast(QLineEdit, widget)
+                line_edit.setReadOnly(True)
+                line_edit.setStyleSheet("color: grey; selection-color: grey")
+                line_edit.repaint()
 
         else:
             self.status = STATUS_STOPPED
             self.goButton.setText("GO")
             for i in range(self.confgrid.rowCount()):
-                self.confgrid.itemAtPosition(i, 1).widget().setReadOnly(False)
-                self.confgrid.itemAtPosition(i, 1).widget().setStyleSheet("color: black; selection-color: black")
-                self.confgrid.itemAtPosition(i, 1).widget().repaint()
+                widget = self.confgrid.itemAtPosition(i, 1).widget()
+
+                line_edit = cast(QLineEdit, widget)
+                line_edit.setReadOnly(False)
+                line_edit.setStyleSheet("color: black; selection-color: black")
+                line_edit.repaint()
 
     def nextButtonPressed(self) -> None:
         if self.diseaseBoard.current_round + 1 > self.total_round_nbr:
@@ -453,11 +449,15 @@ class MainWindow(QMainWindow):
         self.grid.update()
 
     def resetButtonPressed(self) -> None:
-        self.diseaseBoard.immunity_rate = self.qLocale.toDouble(
-            self.confgrid.itemAtPosition(IMMUNITY_RATE_PARAM, 1).widget().text())[0]
+        widget: QWidget = self.confgrid.itemAtPosition(IMMUNITY_RATE_PARAM, 1).widget()
+        line_edit: QLineEdit = cast(QLineEdit, widget)
 
-        self.diseaseBoard.cluster_nbr = self.qLocale.toInt(
-            self.confgrid.itemAtPosition(CLUSTER_NB_PARAM, 1).widget().text())[0]
+        self.diseaseBoard.immunity_rate = self.qLocale.toDouble(line_edit.text())[0]
+
+        widget = self.confgrid.itemAtPosition(CLUSTER_NB_PARAM, 1).widget()
+        line_edit = cast(QLineEdit, widget)
+
+        self.diseaseBoard.cluster_nbr = self.qLocale.toInt(line_edit.text())[0]
 
         self.diseaseBoard.reset()
         self.nb_toursLabel.setText("%03d" % 0)
@@ -474,9 +474,11 @@ class MainWindow(QMainWindow):
                     (self.diseaseBoard.sick_nbr == 0 and self.diseaseBoard.quarantined_nbr == 0):
                 self.status = STATUS_STOPPED
                 for i in range(self.confgrid.rowCount()):
-                    self.confgrid.itemAtPosition(i, 1).widget().setReadOnly(False)
-                    self.confgrid.itemAtPosition(i, 1).widget().setStyleSheet("color: black; selection-color: black")
-                    self.confgrid.itemAtPosition(i, 1).widget().repaint()
+                    widget: QWidget = self.confgrid.itemAtPosition(i, 1).widget()
+                    line_edit: QLineEdit = cast(QLineEdit, widget)
+                    line_edit.setReadOnly(False)
+                    line_edit.setStyleSheet("color: black; selection-color: black")
+                    line_edit.repaint()
 
                 return
 
