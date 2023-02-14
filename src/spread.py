@@ -467,8 +467,6 @@ class MainWindow(QMainWindow):
         self.updateR0()
 
         self.goButton.setStyleSheet("color: black; selection-color: black")
-        self.goButton.setText("LBAH")
-        self.goButton.repaint()
         self.status = STATUS_STOPPED
 
     def updateTimer(self) -> None:

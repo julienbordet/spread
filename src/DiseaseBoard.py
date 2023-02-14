@@ -234,6 +234,7 @@ class DiseaseBoard:
             self._counter[STATE["INFECTED"]][0] += 1
 
     def reset(self) -> None:
+        self._counter = []
         for n in range(len(STATE.items())):
             self._counter.append([])
             self._counter[n].append(0)
