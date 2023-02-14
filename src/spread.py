@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
-from pyqtgraph import PlotWidget, plot
+import numpy as np
+from PyQt5.QtGui import (QColor, QPainter, QBrush, QPen, QPalette, QDoubleValidator, QIntValidator,
+                         QCursor)
+from PyQt5.QtWidgets import (QWidget, QLabel, QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout,
+                             QGridLayout, QLineEdit, QApplication)
+from PyQt5.QtCore import (pyqtSignal, QSize, QPoint, Qt, QEvent, QLocale, QTimer)
 import pyqtgraph as pg
 import sys
 import getopt
+from typing import Optional, Union
 
 from DiseaseBoard import DiseaseBoard
 
@@ -22,9 +24,9 @@ STATE = {
     "HOSPITALIZED": 5
 }
 
-STATE_NAME = [ ("Susceptible", "Susceptible"), ("Infecté", "Infected"),
-               ("Immunisé", "Immune"), ("Quarantaine", "Quarantine"),
-               ("Décédé", "Deceased"), ("Hospitalisé", "Hospitalized")]
+STATE_NAME = [("Susceptible", "Susceptible"), ("Infecté", "Infected"),
+              ("Immunisé", "Immune"), ("Quarantaine", "Quarantine"),
+              ("Décédé", "Deceased"), ("Hospitalisé", "Hospitalized")]
 
 STATUS_PLAYING = 1
 STATUS_STOPPED = 0
@@ -57,13 +59,16 @@ CONF_ELEMENTS = {
     SOCIALDISTANCING_DELAY_PARAM: (("Délai pour soc. dist", "Soc. dist delay"), "int")
 }
 
-LANG_FR = 0
-LANG_US = 1
+spread_lang = int
+
+LANG_FR: spread_lang = 0
+LANG_US: spread_lang = 1
 
 INFECTED_PLOT = 0
 HOSPITALIZED_PLOT = 1
 QUARANTINED_PLOT = 2
 PLOT_NB = 3
+
 
 class Pos(QWidget):
     expandable = pyqtSignal(int, int)
@@ -71,33 +76,34 @@ class Pos(QWidget):
     ohno = pyqtSignal()
 
     # stores floating label list, as we might miss some leaveEvent, we need a way to hide them all
-    activeLabelList = []
+    activeLabelList: list = []
 
-    def __init__(self, x, y, lang, *args, **kwargs):
+    def __init__(self, lang: spread_lang, *args, **kwargs) -> None:
         super(Pos, self).__init__(*args, **kwargs)
 
         self.setFixedSize(QSize(10, 10))
 
-        self.x = x
-        self.y = y
-        self.lang = lang
+        self.lang: spread_lang = lang
 
-        self.floatingLabel = QLabel()
+        self.floatingLabel: QLabel = QLabel()
         self.floatingLabel.setWindowFlags(Qt.FramelessWindowHint)
         self.floatingLabel.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
 
-    def redraw(self, state):
+    def redraw(self, state) -> None:
         self._state = state
         self.update()
 
-    def paintEvent(self, event):
+    def paintEvent(self, event) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
 
         r = event.rect()
 
+        outer: Optional[Union[QColor, Qt.GlobalColor]] = None
+        inner: Optional[Union[QColor, Qt.GlobalColor]] = None
+
         if self._state == STATE["SUSCEPTIBLE"]:
-            blueColor = QColor(210,210,255)
+            blueColor: QColor = QColor(210, 210, 255)
             outer, inner = blueColor, blueColor
         elif self._state == STATE["INFECTED"]:
             outer, inner = Qt.darkRed, Qt.red
@@ -108,8 +114,11 @@ class Pos(QWidget):
         elif self._state == STATE["IMMUNE"]:
             outer, inner = Qt.gray, Qt.lightGray
         elif self._state == STATE["HOSPITALIZED"]:
-            darkblueColor = QColor(100,110,200)
+            darkblueColor: QColor = QColor(100, 110, 200)
             outer, inner = darkblueColor, darkblueColor
+
+        if outer is None or inner is None:
+            raise ValueError("Invalid color")
 
         p.fillRect(r, QBrush(inner))
         pen = QPen(outer)
@@ -117,20 +126,20 @@ class Pos(QWidget):
         p.setPen(pen)
         p.drawRect(r)
 
-    def click(self):
+    def click(self) -> None:
         pass
         return
 
         # self.clicked.emit()
 
-    def mouseReleaseEvent(self, e):
+    def mouseReleaseEvent(self, e) -> None:
         pass
 
-    def enterEvent(self, event):
+    def enterEvent(self, event) -> None:
         if event.type() == QEvent.Enter and not self.floatingLabel.isVisible():
             self.cleanFloatingLabel()
 
-            position = QCursor.pos()
+            position: QPoint = QCursor.pos()
             position += QPoint(0, -20)  # Move the floating label up to improve its visibility
             labelText = STATE_NAME[self._state][self.lang]
             self.floatingLabel.setText(labelText)
@@ -141,11 +150,11 @@ class Pos(QWidget):
 
             Pos.activeLabelList.append(self.floatingLabel)
 
-    def leaveEvent(self, event):
+    def leaveEvent(self, event) -> None:
         if event.type() == QEvent.Leave:
             self.cleanFloatingLabel()
 
-    def cleanFloatingLabel(self):
+    def cleanFloatingLabel(self) -> None:
         for i, label in enumerate(Pos.activeLabelList):
             label.setVisible(False)
             label.update()
@@ -154,9 +163,11 @@ class Pos(QWidget):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, newboard_size, round_nbr, dB, *args, **kwargs):
+    def __init__(self, newboard_size, round_nbr, db, *args, **kwargs) -> None:
         super(MainWindow, self).__init__(*args, **kwargs)
         self.setWindowTitle("spread : disease spread simple model")
+
+        self.lang: spread_lang
 
         self.qLocale = QLocale()
         if self.qLocale.name()[0:2] == "fr":
@@ -167,11 +178,11 @@ class MainWindow(QMainWindow):
         self.status = STATUS_STOPPED
 
         self.board_size = newboard_size
-        self.diseaseBoard = dB
+        self.diseaseBoard = db
         self.total_round_nbr = round_nbr
 
-        # w est le Widge QT affiché dans la fenêtre
-        w = QWidget()
+        # w est le Widget QT affiché dans la fenêtre
+        w = QWidget(self)
 
         # hb : la bande horizontale supérieure de la fenêtre
         hb = QHBoxLayout()
@@ -207,13 +218,13 @@ class MainWindow(QMainWindow):
 
         # vb permet de mettre en place 2 lignes
         # La première ligne contient le hb ci-dessous (le header)
-        # La seconde ligne contient un vboxlayout pour la configuration et un gridLayout pour le board
+        # La seconde ligne contient un vboxlayout pour la configuration et un grid_layout pour le board
         vb = QVBoxLayout()
         vb.addLayout(hb)
         vb.addStretch(1)
 
         # Construction de la partie principale de la fenêtre
-        # A l'aide d'un Hbox (mainLayout), mise en place d'une barre à gauche pour la configuration (QGridLayout de
+        # A l'aide d'un Hbox (main_layout), mise en place d'une barre à gauche pour la configuration (QGridLayout de
         # QLabel et de QLineEdit) puis à droite le board et enfin la zone de graphique
 
         #
@@ -228,72 +239,77 @@ class MainWindow(QMainWindow):
         self.grid.setSpacing(1)
 
         # Nécessaire pour permettre à l'affichage du board de rester compact
-        gridLayout = QVBoxLayout()
-        gridLayout.addStretch(1)
-        gridLayout.addLayout(self.grid)
+        grid_layout = QVBoxLayout()
+        grid_layout.addStretch(1)
+        grid_layout.addLayout(self.grid)
 
         #
         # Zone pour afficher les graphiques
         #
 
-        graphLayout = QHBoxLayout()
-        graphWidget = pg.PlotWidget()
-        graphWidget.setBackground(self.palette().color(QPalette.Window))
-        graphWidget.setXRange(0, self.total_round_nbr, padding=0)
-        graphLayout.addWidget(graphWidget)
+        graph_layout = QHBoxLayout()
+        graph_widget = pg.PlotWidget()
+        graph_widget.setBackground(self.palette().color(QPalette.Window))
+        graph_widget.setXRange(0, self.total_round_nbr, padding=0.0)
+        graph_layout.addWidget(graph_widget)
 
         self.plots = [None] * PLOT_NB
-        self.plots[INFECTED_PLOT] = graphWidget.plot([],[], pen=pg.mkPen(color = (255,0,0), width=3), name="infected 'on the road'")
-        self.plots[HOSPITALIZED_PLOT] = graphWidget.plot([],[], pen=pg.mkPen(color=(100,110,200), width=3), name="hospitalized")
-        self.plots[QUARANTINED_PLOT] = graphWidget.plot([],[], pen=pg.mkPen(color=(255,255,0), width=3), name="quarantined")
-        graphWidget.addLegend()
+        self.plots[INFECTED_PLOT] = graph_widget.plot([], [], pen=pg.mkPen(color=(255, 0, 0), width=3),
+                                                      name="infected 'on the road'")
+        self.plots[HOSPITALIZED_PLOT] = graph_widget.plot([], [], pen=pg.mkPen(color=(100, 110, 200),
+                                                                               width=3),
+                                                          name="hospitalized")
+        self.plots[QUARANTINED_PLOT] = graph_widget.plot([], [],
+                                                         pen=pg.mkPen(color=(255, 255, 0), width=3),
+                                                         name="quarantined")
+        graph_widget.addLegend()
 
-        mainLayout = QHBoxLayout()
-        mainLayout.addStretch(1)
-        mainLayout.addLayout(self.confgrid)
-        mainLayout.addLayout(gridLayout)
-        mainLayout.addLayout(graphLayout)
-        vb.addLayout(mainLayout)
+        main_layout = QHBoxLayout()
+        main_layout.addStretch(1)
+        main_layout.addLayout(self.confgrid)
+        main_layout.addLayout(grid_layout)
+        main_layout.addLayout(graph_layout)
+        vb.addLayout(main_layout)
 
         #
         # Footer configuration
         #
 
-        footerLayout = QHBoxLayout()
+        footer_layout = QHBoxLayout()
 
-        popLabel = QLabel("Pop = " + self.qLocale.toString(self.diseaseBoard.population))
-        popLabel.setStyleSheet("color: grey")
-        footerLayout.addWidget(popLabel)
+        pop_label = QLabel("Pop = " + self.qLocale.toString(self.diseaseBoard.population))
+        pop_label.setStyleSheet("color: grey")
+        footer_layout.addWidget(pop_label)
 
-        r0Label = QLabel("R0 = " + self.qLocale.toString(self.diseaseBoard.R0))
-        r0Label.setStyleSheet("color: grey")
-        self.r0Label = r0Label
-        footerLayout.addWidget(r0Label)
+        r0_label = QLabel("R0 = " + self.qLocale.toString(self.diseaseBoard.R0))
+        r0_label.setStyleSheet("color: grey")
+        self.r0_label = r0_label
+        footer_layout.addWidget(r0_label)
 
-        ratioLabel = QLabel("#infected / #detected = 1")
-        ratioLabel.setStyleSheet("color: grey")
-        self.ratioLabel = ratioLabel
-        footerLayout.addWidget(ratioLabel)
+        ratio_label = QLabel("#infected / #detected = 1")
+        ratio_label.setStyleSheet("color: grey")
+        self.ratio_label = ratio_label
+        footer_layout.addWidget(ratio_label)
 
-        deceasedLabel = QLabel("#Death = " + self.qLocale.toString(self.diseaseBoard.deceasedNbr))
-        deceasedLabel.setStyleSheet("color: grey")
-        self.deceasedLabel = deceasedLabel
-        footerLayout.addWidget(deceasedLabel)
+        deceased_label = QLabel("#Death = " + self.qLocale.toString(self.diseaseBoard.deceased_nbr))
+        deceased_label.setStyleSheet("color: grey")
+        self.deceased_label = deceased_label
+        footer_layout.addWidget(deceased_label)
 
-        infectedLabel = QLabel("#Sick = " + self.qLocale.toString(self.diseaseBoard.sickNbr))
-        infectedLabel.setStyleSheet("color: grey")
-        self.infectedLabel = infectedLabel
-        footerLayout.addWidget(infectedLabel)
+        infected_label = QLabel("#Sick = " + self.qLocale.toString(self.diseaseBoard.sick_nbr))
+        infected_label.setStyleSheet("color: grey")
+        self.infectedLabel = infected_label
+        footer_layout.addWidget(infected_label)
 
-        vb.addLayout(footerLayout)
+        vb.addLayout(footer_layout)
 
         w.setLayout(vb)
         self.setCentralWidget(w)
 
-        self.initMap(dB.lastBoard())
+        self.initMap(db.last_board())
         self.show()
 
-    def setupConfGrid(self):
+    def setupConfGrid(self) -> QGridLayout:
 
         confgrid = QGridLayout()
         confgrid.setSpacing(1)
@@ -304,31 +320,31 @@ class MainWindow(QMainWindow):
             qle = QLineEdit()
 
             if param == IMMUNITY_RATE_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.immunityRate, precision = 2))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.immunity_rate, precision=2))
             if param == CLUSTER_NB_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.clusterNbr))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.cluster_nbr))
             elif param == TRANSMISSION_RATE_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.contagionRate, precision = 2))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.contagion_rate, precision=2))
                 qle.textChanged.connect(self.updateR0)
             elif param == MORTALITY_RATE_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.mortalityRate, precision=2))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.mortality_rate, precision=2))
             elif param == MORTALITY_DELAY_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.mortalityDelay))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.mortality_delay))
             elif param == CONTAGION_DELAY_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.contagionDelay))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.contagion_delay))
                 qle.textChanged.connect(self.updateR0)
             elif param == HOSPITALIZED_RATE_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.hospitalizedRate))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.hospitalized_rate))
             elif param == HOSPITALIZED_DELAY_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.hospitalizedDelay))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.hospitalized_delay))
             elif param == QUARANTINE_RATE_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.quarantineRate, precision=2))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.quarantine_rate, precision=2))
             elif param == DIAGNOSIS_DELAY_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.diagnosisDelay))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.diagnosis_delay))
             elif param == SOCIALDISTANCING_DELAY_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.socialDistancingDelay))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.social_distancing_delay))
             elif param == SOCIALDISTANCING_RATE_PARAM:
-                qle.setText(self.qLocale.toString(self.diseaseBoard.socialDistancingContagionRate, precision=2))
+                qle.setText(self.qLocale.toString(self.diseaseBoard.social_distancing_contagion_rate, precision=2))
 
             if data[1] == "double":
                 qle.setValidator(QDoubleValidator(0.0, 1.0, 2))
@@ -343,59 +359,69 @@ class MainWindow(QMainWindow):
 
         return confgrid
 
-    def initMap(self, etat):
+    def initMap(self, etat) -> None:
         # Add positions to the map
         for x in range(0, self.board_size):
             for y in range(0, self.board_size):
-                w = Pos(x, y, self.lang)
+                w = Pos(self.lang)
                 self.grid.addWidget(w, x, y)
                 w.redraw(etat[x, y])
 
-    def updateMap(self, etat):
+    def updateMap(self, etat) -> None:
         # Add positions to the map
         for x in range(0, self.board_size):
             for y in range(0, self.board_size):
                 w = self.grid.itemAtPosition(x, y).widget()
                 w.redraw(etat[x, y])
 
-        self.infectedLabel.setText("#Sick = " + self.qLocale.toString(self.diseaseBoard.sickNbr) +
-                                   " (inc #Hospit. = " +
-                                   self.qLocale.toString(self.diseaseBoard.hospitalizedNbr) + ")")
+        infected_text = "#Sick = "
+        infected_text += self.qLocale.toString(self.diseaseBoard.sick_nbr)
+        infected_text += " (inc #Hospit. = "
+        infected_text += self.qLocale.toString(self.diseaseBoard.hospitalized_nbr)
+        infected_text += ")"
 
-        self.deceasedLabel.setText("#Deceased = " + self.qLocale.toString(self.diseaseBoard.deceasedNbr))
-        if self.diseaseBoard.diagnosedNbr != 0:
-            self.ratioLabel.setText("#infected / #detected = " + \
-                                    self.qLocale.toString(self.diseaseBoard.sickNbr / self.diseaseBoard.diagnosedNbr))
+        self.infectedLabel.setText(infected_text)
+
+        self.deceased_label.setText("#Deceased = " + self.qLocale.toString(self.diseaseBoard.deceased_nbr))
+
+        self.deceased_label.setText("#Deceased = " + self.qLocale.toString(self.diseaseBoard.deceased_nbr))
+        if self.diseaseBoard.diagnosed_nbr != 0:
+            explanation = "#infected / #detected =" + self.qLocale.toString(
+                self.diseaseBoard.sick_nbr / self.diseaseBoard.diagnosed_nbr)
+            self.ratio_label.setText(explanation)
         else:
-            self.ratioLabel.setText("#infected / #detected = N/A")
+            self.ratio_label.setText("#infected / #detected = N/A")
 
-        round_nbr = self.diseaseBoard.currentRound
-        self.plots[INFECTED_PLOT].setData(range(0, round_nbr + 1), self.diseaseBoard.infectedData)
-        self.plots[HOSPITALIZED_PLOT].setData(range(0, round_nbr + 1), self.diseaseBoard.hospitalizedData)
-        self.plots[QUARANTINED_PLOT].setData(range(0, round_nbr + 1), self.diseaseBoard.quarantinedData)
+        round_nbr = self.diseaseBoard.current_round
+        self.plots[INFECTED_PLOT].setData(range(0, round_nbr + 1),
+                                          self.diseaseBoard.infected_data)
+        self.plots[HOSPITALIZED_PLOT].setData(range(0, round_nbr + 1),
+                                              self.diseaseBoard.hospitalized_data)
+        self.plots[QUARANTINED_PLOT].setData(range(0, round_nbr + 1),
+                                             self.diseaseBoard.quarantined_data)
 
-    def goButtonPressed(self):
-        if (self.diseaseBoard.currentRound == 0):
+    def goButtonPressed(self) -> None:
+        if self.diseaseBoard.current_round == 0:
             # Reconfiguration de la simulation
-            self.diseaseBoard.contagionRate = self.qLocale.toDouble(
+            self.diseaseBoard.contagion_rate = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(TRANSMISSION_RATE_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.mortalityRate = self.qLocale.toDouble(
+            self.diseaseBoard.mortality_rate = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(MORTALITY_RATE_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.contagionDelay = self.qLocale.toDouble(
+            self.diseaseBoard.contagion_delay = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(CONTAGION_DELAY_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.hospitalizedRate = self.qLocale.toDouble(
+            self.diseaseBoard.hospitalized_rate = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(HOSPITALIZED_RATE_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.hospitalizedDelay = self.qLocale.toDouble(
+            self.diseaseBoard.hospitalized_delay = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(HOSPITALIZED_DELAY_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.mortalityDelay = self.qLocale.toDouble(
+            self.diseaseBoard.mortality_delay = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(MORTALITY_DELAY_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.quarantineRate = self.qLocale.toDouble(
+            self.diseaseBoard.quarantine_rate = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(QUARANTINE_RATE_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.diagnosisDelay = self.qLocale.toDouble(
+            self.diseaseBoard.diagnosis_delay = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(DIAGNOSIS_DELAY_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.socialDistancingDelay = self.qLocale.toInt(
+            self.diseaseBoard.social_distancing_delay = self.qLocale.toInt(
                 self.confgrid.itemAtPosition(SOCIALDISTANCING_DELAY_PARAM, 1).widget().text())[0]
-            self.diseaseBoard.socialDistancingContagionRate = self.qLocale.toDouble(
+            self.diseaseBoard.social_distancing_contagion_rate = self.qLocale.toDouble(
                 self.confgrid.itemAtPosition(SOCIALDISTANCING_RATE_PARAM, 1).widget().text())[0]
 
         if self.status == STATUS_STOPPED:
@@ -411,60 +437,61 @@ class MainWindow(QMainWindow):
             self.status = STATUS_STOPPED
             self.goButton.setText("GO")
             for i in range(self.confgrid.rowCount()):
-                self.confgrid.itemAtPosition(i,1).widget().setReadOnly(False)
+                self.confgrid.itemAtPosition(i, 1).widget().setReadOnly(False)
                 self.confgrid.itemAtPosition(i, 1).widget().setStyleSheet("color: black; selection-color: black")
                 self.confgrid.itemAtPosition(i, 1).widget().repaint()
 
-    def nextButtonPressed(self):
-        if self.diseaseBoard.currentRound + 1 > self.total_round_nbr:
+    def nextButtonPressed(self) -> None:
+        if self.diseaseBoard.current_round + 1 > self.total_round_nbr:
             self.status = STATUS_STOPPED
             return
 
-        etat = self.diseaseBoard.nextRound()
-        self.nb_toursLabel.setText("%03d" % self.diseaseBoard.currentRound)
+        etat: np.ndarray = self.diseaseBoard.next_round()
+        self.nb_toursLabel.setText("%03d" % self.diseaseBoard.current_round)
         self.updateMap(etat)
         self.updateR0()
         self.grid.update()
 
-    def resetButtonPressed(self):
-        self.diseaseBoard.immunityRate = self.qLocale.toDouble(
+    def resetButtonPressed(self) -> None:
+        self.diseaseBoard.immunity_rate = self.qLocale.toDouble(
             self.confgrid.itemAtPosition(IMMUNITY_RATE_PARAM, 1).widget().text())[0]
 
-        self.diseaseBoard.clusterNbr = self.qLocale.toInt(
+        self.diseaseBoard.cluster_nbr = self.qLocale.toInt(
             self.confgrid.itemAtPosition(CLUSTER_NB_PARAM, 1).widget().text())[0]
 
         self.diseaseBoard.reset()
         self.nb_toursLabel.setText("%03d" % 0)
-        self.updateMap(self.diseaseBoard.lastBoard())
+        self.updateMap(self.diseaseBoard.last_board())
         self.updateR0()
 
         self.goButton.setText("GO")
         self.status = STATUS_STOPPED
 
-    def updateTimer(self):
+    def updateTimer(self) -> None:
         if self.status == STATUS_PLAYING:
 
-            if self.diseaseBoard.currentRound + 1 > self.total_round_nbr or \
-                        (self.diseaseBoard.sickNbr == 0 and self.diseaseBoard.quarantinedNbr == 0):
+            if self.diseaseBoard.current_round + 1 > self.total_round_nbr or \
+                    (self.diseaseBoard.sick_nbr == 0 and self.diseaseBoard.quarantined_nbr == 0):
                 self.status = STATUS_STOPPED
                 for i in range(self.confgrid.rowCount()):
-                    self.confgrid.itemAtPosition(i,1).widget().setReadOnly(False)
+                    self.confgrid.itemAtPosition(i, 1).widget().setReadOnly(False)
                     self.confgrid.itemAtPosition(i, 1).widget().setStyleSheet("color: black; selection-color: black")
                     self.confgrid.itemAtPosition(i, 1).widget().repaint()
 
                 return
 
-            self.nb_toursLabel.setText("%03d" % self.diseaseBoard.currentRound)
-            etat = self.diseaseBoard.nextRound()
+            self.nb_toursLabel.setText("%03d" % self.diseaseBoard.current_round)
+            etat = self.diseaseBoard.next_round()
             self.updateMap(etat)
             self.updateR0()
 
-    def updateR0(self):
-        self.r0Label.setText("R0 = {:.3} ".format(self.diseaseBoard.R0))
+    def updateR0(self) -> None:
+        self.r0_label.setText("R0 = {:.3} ".format(self.diseaseBoard.R0))
 
-def usage():
+
+def usage() -> None:
     print(
-"""Usage: spread [options] round_number board_size cluster_number
+        """Usage: spread [options] round_number board_size cluster_number
             round_number: number of rounds for the simulation
             board_size: size of the board
             cluster_number: number of initial board disease clusters""")
@@ -489,38 +516,28 @@ if __name__ == '__main__':
             sys.exit()
 
     if len(sys.argv) >= 2:
-        try:
-            tours = int(sys.argv[1])
-        except:
-            pass
+        tours = int(sys.argv[1])
 
     if len(sys.argv) >= 3:
-        try:
-            board_size = int(sys.argv[2])
-        except:
-            pass
+        board_size = int(sys.argv[2])
 
     if len(sys.argv) >= 4:
-        try:
-            nb_clusters = int(sys.argv[3])
-        except:
-            pass
+        nb_clusters = int(sys.argv[3])
 
     db = DiseaseBoard(board_size, tours, nb_clusters)
-    db.immunityRate = 0.0
+    db.immunity_rate = 0.0
     # Entre 2 et 3 personnes contaminées par malade, si on considère qu'à chaque tour (a peu près un jour), on
     # a l'occasion de contaminer environ 15 personnes, et ce pendant la durée de la contamination, considérée comme
     # égale au délai de rétablissement
 
-    db.contagionDelay = 14
-    db.contagionRate = 2 / 13
-    db.diagnosisDelay = 5
-    db.hospitalizedDelay = 5
-    db.quarantineRate = 0.5
+    db.contagion_delay = 14
+    db.contagion_rate = 2 / 13
+    db.diagnosis_delay = 5
+    db.hospitalized_delay = 5
+    db.quarantine_rate = 0.5
 
-    db.socialDistancingDelay = -1
-    db.socialDistancingContagionRate = db.contagionRate / 3
-
+    db.social_distancing_delay = -1
+    db.social_distancing_contagion_rate = db.contagion_rate / 3
 
     app = QApplication([])
     window = MainWindow(board_size, tours, db)
