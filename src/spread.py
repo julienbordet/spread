@@ -195,7 +195,7 @@ class MainWindow(QMainWindow):
         self.status = STATUS_STOPPED
 
         self.board_size = newboard_size
-        self.diseaseBoard = db
+        self.diseaseBoard: DiseaseBoard = db
         self.total_round_nbr = round_nbr
 
         # w est le Widget QT affiché dans la fenêtre
@@ -451,12 +451,10 @@ class MainWindow(QMainWindow):
     def resetButtonPressed(self) -> None:
         widget: QWidget = self.confgrid.itemAtPosition(IMMUNITY_RATE_PARAM, 1).widget()
         line_edit: QLineEdit = cast(QLineEdit, widget)
-
         self.diseaseBoard.immunity_rate = self.qLocale.toDouble(line_edit.text())[0]
 
         widget = self.confgrid.itemAtPosition(CLUSTER_NB_PARAM, 1).widget()
         line_edit = cast(QLineEdit, widget)
-
         self.diseaseBoard.cluster_nbr = self.qLocale.toInt(line_edit.text())[0]
 
         self.diseaseBoard.reset()
@@ -473,6 +471,10 @@ class MainWindow(QMainWindow):
             if self.diseaseBoard.current_round + 1 > self.total_round_nbr or \
                     (self.diseaseBoard.sick_nbr == 0 and self.diseaseBoard.quarantined_nbr == 0):
                 self.status = STATUS_STOPPED
+                self.goButton.setStyleSheet("color: grey; selection-color: black")
+                self.goButton.setText("GO")
+                # Set text in goButton to dark gray
+
                 for i in range(self.confgrid.rowCount()):
                     widget: QWidget = self.confgrid.itemAtPosition(i, 1).widget()
                     line_edit: QLineEdit = cast(QLineEdit, widget)
@@ -526,7 +528,7 @@ if __name__ == '__main__':
     if len(sys.argv) >= 4:
         nb_clusters = int(sys.argv[3])
 
-    db = DiseaseBoard(board_size, tours, nb_clusters)
+    db = DiseaseBoard(board_size, nb_clusters)
     db.immunity_rate = 0.0
     # Entre 2 et 3 personnes contaminées par malade, si on considère qu'à chaque tour (a peu près un jour), on
     # a l'occasion de contaminer environ 15 personnes, et ce pendant la durée de la contamination, considérée comme

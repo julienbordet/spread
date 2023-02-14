@@ -16,7 +16,7 @@ STATE = {
 
 
 class DiseaseBoard:
-    def __init__(self, size: int, round_nbr: int, cluster_nbr: int) -> None:
+    def __init__(self, size: int, cluster_nbr: int) -> None:
 
         self._length: int = size
         self._width: int = size
@@ -235,6 +235,8 @@ class DiseaseBoard:
             self._counter[n].append(0)
 
         self.init_board()
+
+        self._current_round = 0
 
     def next_round(self) -> np.ndarray:
         """
