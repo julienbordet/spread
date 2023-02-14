@@ -16,22 +16,38 @@ $ brew install qt
 $ sudo apt-get install qt5-default
 ```
 
-## Install required Python library
+## Install required Python libraries and install spread in the virtual environment
 
 ```
 $ cd spread
 $ python3 -m venv venv
 $ . ./venv/bin/activate
-$ python3 setup.py install
+$ pip3 install -e "."
+```
+
+**Note**
+
+On macOS, the PyQt5 installation might fail with the following error:
+
+```
+[...]
+      sipbuild.exceptions.UserException
+```
+
+In this case, you need to create the virtual environnement with the following command:
+
+```
+$ python3 -m venv --system-site-packages venv
 ```
 
 ## Launch spread
 
 ```
-"""Usage: spread [options] round_number board_size cluster_number
+$ python3 src/spread.py -h
+Usage: spread [options] round_number board_size cluster_number
             round_number: number of rounds for the simulation
             board_size: size of the board
-            cluster_number: number of initial board disease clusters""")
+            cluster_number: number of initial board disease clusters
 ```
 
 ## Introduction
