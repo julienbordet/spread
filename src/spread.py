@@ -120,8 +120,8 @@ class Pos(QWidget):
         inner: Optional[Union[QColor, Qt.GlobalColor]] = None
 
         if self.patient_state == STATE["SUSCEPTIBLE"]:
-            blueColor: QColor = QColor(210, 210, 255)
-            outer, inner = blueColor, blueColor
+            blue_color: QColor = QColor(210, 210, 255)
+            outer, inner = blue_color, blue_color
         elif self.patient_state == STATE["INFECTED"]:
             outer, inner = Qt.darkRed, Qt.red
         elif self.patient_state == STATE["DECEASED"]:
@@ -131,8 +131,8 @@ class Pos(QWidget):
         elif self.patient_state == STATE["IMMUNE"]:
             outer, inner = Qt.gray, Qt.lightGray
         elif self.patient_state == STATE["HOSPITALIZED"]:
-            darkblueColor: QColor = QColor(100, 110, 200)
-            outer, inner = darkblueColor, darkblueColor
+            darkblue_color: QColor = QColor(100, 110, 200)
+            outer, inner = darkblue_color, darkblue_color
 
         if outer is None or inner is None:
             raise ValueError("Invalid color")
@@ -163,8 +163,8 @@ class Pos(QWidget):
             if self.patient_state is None:
                 raise ValueError("Invalid patient state")
 
-            labelText = STATE_NAME[self.patient_state][self.lang]
-            self.floatingLabel.setText(labelText)
+            label_text = STATE_NAME[self.patient_state][self.lang]
+            self.floatingLabel.setText(label_text)
             self.floatingLabel.move(position)
 
             self.floatingLabel.setVisible(True)
@@ -185,7 +185,7 @@ class Pos(QWidget):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, newboard_size, round_nbr, db, *args, **kwargs) -> None:
+    def __init__(self, newboard_size: int, round_nbr: int, db: DiseaseBoard, *args, **kwargs) -> None:
         super(MainWindow, self).__init__(*args, **kwargs)
         self.setWindowTitle("spread : disease spread simple model")
 
@@ -341,8 +341,8 @@ class MainWindow(QMainWindow):
 
             qle = QLineEdit()
 
-            property = PARAM_TO_PROPERTY[param]
-            value = getattr(self.diseaseBoard, property)
+            property_to_read = PARAM_TO_PROPERTY[param]
+            value = getattr(self.diseaseBoard, property_to_read)
             if param in [IMMUNITY_RATE_PARAM, TRANSMISSION_RATE_PARAM, MORTALITY_RATE_PARAM,
                          QUARANTINE_RATE_PARAM, SOCIALDISTANCING_RATE_PARAM]:
                 qle.setText(self.qLocale.toString(value, precision=2))  # type: ignore
