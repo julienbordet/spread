@@ -93,8 +93,8 @@ class Pos(QWidget):
     # stores floating label list, as we might miss some leaveEvent, we need a way to hide them all
     activeLabelList: list = []
 
-    def __init__(self, lang: int, *args, **kwargs) -> None:
-        super(Pos, self).__init__(*args, **kwargs)
+    def __init__(self, lang: int) -> None:
+        super(Pos, self).__init__(parent=None)
 
         self.setFixedSize(QSize(10, 10))
 
@@ -143,7 +143,8 @@ class Pos(QWidget):
         p.setPen(pen)
         p.drawRect(r)
 
-    def click(self) -> None:
+    @staticmethod
+    def click() -> None:
         pass
         return
 
@@ -176,7 +177,8 @@ class Pos(QWidget):
         if event.type() == QEvent.Leave:
             self.cleanFloatingLabel()
 
-    def cleanFloatingLabel(self) -> None:
+    @staticmethod
+    def cleanFloatingLabel() -> None:
         for i, label in enumerate(Pos.activeLabelList):
             label.setVisible(False)
             label.update()
@@ -185,8 +187,8 @@ class Pos(QWidget):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, newboard_size: int, round_nbr: int, db: DiseaseBoard, *args, **kwargs) -> None:
-        super(MainWindow, self).__init__(*args, **kwargs)
+    def __init__(self, newboard_size: int, round_nbr: int, disease_board: DiseaseBoard) -> None:
+        super(MainWindow, self).__init__(parent=None)
         self.setWindowTitle("spread : disease spread simple model")
 
         self.lang: int
@@ -200,7 +202,7 @@ class MainWindow(QMainWindow):
         self.status = STATUS_STOPPED
 
         self.board_size = newboard_size
-        self.diseaseBoard: DiseaseBoard = db
+        self.diseaseBoard: DiseaseBoard = disease_board
         self.total_round_nbr = round_nbr
 
         # w est le Widget QT affiché dans la fenêtre
@@ -328,7 +330,7 @@ class MainWindow(QMainWindow):
         w.setLayout(vb)
         self.setCentralWidget(w)
 
-        self.initMap(db.last_board())
+        self.initMap(disease_board.last_board())
         self.show()
 
     def setupConfGrid(self) -> QGridLayout:
