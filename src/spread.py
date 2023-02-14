@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import numpy as np
+
 from PyQt5.QtGui import (QColor, QPainter, QBrush, QPen, QPalette, QDoubleValidator, QIntValidator,
                          QCursor)
 from PyQt5.QtWidgets import (QWidget, QLabel, QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout,
@@ -74,7 +74,7 @@ PARAM_TO_PROPERTY = {
     SOCIALDISTANCING_RATE_PARAM: 'social_distancing_contagion_rate',
 }
 
-PROPERTY_TO_PARAM = { v: k for k, v in PARAM_TO_PROPERTY.items() }
+PROPERTY_TO_PARAM = {v: k for k, v in PARAM_TO_PROPERTY.items()}
 
 LANG_FR: int = 0
 LANG_US: int = 1
@@ -86,9 +86,9 @@ PLOT_NB = 3
 
 
 class Pos(QWidget):
-    expandable = pyqtSignal(int, int)
-    clicked = pyqtSignal()
-    ohno = pyqtSignal()
+    expandable = pyqtSignal(int, int, name="expandable")
+    clicked = pyqtSignal(name="clicked")
+    ohno = pyqtSignal(name="ohno")
 
     # stores floating label list, as we might miss some leaveEvent, we need a way to hide them all
     activeLabelList: list = []
@@ -156,7 +156,8 @@ class Pos(QWidget):
         if event.type() == QEvent.Enter and not self.floatingLabel.isVisible():
             self.cleanFloatingLabel()
 
-            position: QPoint = QCursor.pos()
+            # Get current position of the cursor as a QPoint
+            position: QPoint = QCursor.pos()  # type: ignore
             position += QPoint(0, -20)  # Move the floating label up to improve its visibility
 
             if self.patient_state is None:
@@ -213,29 +214,29 @@ class MainWindow(QMainWindow):
         self.nb_toursLabel.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         self.nb_toursLabel.setText("%03d" % 0)
 
-        self._timer = QTimer()
-        self._timer.timeout.connect(self.updateTimer)
+        self._timer = QTimer(parent=self)
+        self._timer.timeout.connect(self.updateTimer)  # type: ignore
         self._timer.start(100)  # in ms
 
         self.goButton = QPushButton("GO")
         self.goButton.setFixedSize(QSize(72, 32))
         self.goButton.setFlat(False)
-        self.goButton.pressed.connect(self.goButtonPressed)
+        self.goButton.pressed.connect(self.goButtonPressed)  # type: ignore
 
         self.nextButton = QPushButton("NEXT")
         self.nextButton.setFixedSize(QSize(72, 32))
         self.nextButton.setFlat(False)
-        self.nextButton.pressed.connect(self.nextButtonPressed)
+        self.nextButton.pressed.connect(self.nextButtonPressed)  # type: ignore
 
         self.resetButton = QPushButton("RESET")
         self.resetButton.setFixedSize(QSize(82, 32))
         self.resetButton.setFlat(False)
-        self.resetButton.pressed.connect(self.resetButtonPressed)
+        self.resetButton.pressed.connect(self.resetButtonPressed)  # type: ignore
 
-        hb.addWidget(self.nb_toursLabel)
-        hb.addWidget(self.goButton)
-        hb.addWidget(self.nextButton)
-        hb.addWidget(self.resetButton)
+        hb.addWidget(self.nb_toursLabel)  # type: ignore
+        hb.addWidget(self.goButton)  # type: ignore
+        hb.addWidget(self.nextButton)  # type: ignore
+        hb.addWidget(self.resetButton)  # type: ignore
 
         # vb permet de mettre en place 2 lignes
         # La première ligne contient le hb ci-dessous (le header)
@@ -271,8 +272,8 @@ class MainWindow(QMainWindow):
         graph_layout = QHBoxLayout()
         graph_widget = pg.PlotWidget()
         graph_widget.setBackground(self.palette().color(QPalette.Window))
-        graph_widget.setXRange(0, self.total_round_nbr, padding=0.0)
-        graph_layout.addWidget(graph_widget)
+        graph_widget.setXRange(0, self.total_round_nbr, padding=0.0)  # type: ignore
+        graph_layout.addWidget(graph_widget)  # type: ignore
 
         self.plots = [None] * PLOT_NB
         self.plots[INFECTED_PLOT] = graph_widget.plot([], [], pen=pg.mkPen(color=(255, 0, 0), width=3),
@@ -300,27 +301,27 @@ class MainWindow(QMainWindow):
 
         pop_label = QLabel("Pop = " + self.qLocale.toString(self.diseaseBoard.population))
         pop_label.setStyleSheet("color: grey")
-        footer_layout.addWidget(pop_label)
+        footer_layout.addWidget(pop_label)  # type: ignore
 
         r0_label = QLabel("R0 = " + self.qLocale.toString(self.diseaseBoard.R0))
         r0_label.setStyleSheet("color: grey")
         self.r0_label = r0_label
-        footer_layout.addWidget(r0_label)
+        footer_layout.addWidget(r0_label)  # type: ignore
 
         ratio_label = QLabel("#infected / #detected = 1")
         ratio_label.setStyleSheet("color: grey")
         self.ratio_label = ratio_label
-        footer_layout.addWidget(ratio_label)
+        footer_layout.addWidget(ratio_label)  # type: ignore
 
         deceased_label = QLabel("#Death = " + self.qLocale.toString(self.diseaseBoard.deceased_nbr))
         deceased_label.setStyleSheet("color: grey")
         self.deceased_label = deceased_label
-        footer_layout.addWidget(deceased_label)
+        footer_layout.addWidget(deceased_label)  # type: ignore
 
         infected_label = QLabel("#Sick = " + self.qLocale.toString(self.diseaseBoard.sick_nbr))
         infected_label.setStyleSheet("color: grey")
         self.infectedLabel = infected_label
-        footer_layout.addWidget(infected_label)
+        footer_layout.addWidget(infected_label)  # type: ignore
 
         vb.addLayout(footer_layout)
 
@@ -344,12 +345,12 @@ class MainWindow(QMainWindow):
             value = getattr(self.diseaseBoard, property)
             if param in [IMMUNITY_RATE_PARAM, TRANSMISSION_RATE_PARAM, MORTALITY_RATE_PARAM,
                          QUARANTINE_RATE_PARAM, SOCIALDISTANCING_RATE_PARAM]:
-                qle.setText(self.qLocale.toString(value, precision=2))
+                qle.setText(self.qLocale.toString(value, precision=2))  # type: ignore
             else:
                 qle.setText(self.qLocale.toString(value))
 
             if param in [TRANSMISSION_RATE_PARAM, CONTAGION_DELAY_PARAM]:
-                qle.textChanged.connect(self.updateR0)
+                qle.textChanged.connect(self.updateR0)  # type: ignore
 
             if data[1] == "double":
                 qle.setValidator(QDoubleValidator(0.0, 1.0, 2))
@@ -399,11 +400,12 @@ class MainWindow(QMainWindow):
             self.ratio_label.setText("#infected / #detected = N/A")
 
         round_nbr = self.diseaseBoard.current_round
-        self.plots[INFECTED_PLOT].setData(range(0, round_nbr + 1),
+
+        self.plots[INFECTED_PLOT].setData(range(0, round_nbr + 1),  # type: ignore
                                           self.diseaseBoard.infected_data)
-        self.plots[HOSPITALIZED_PLOT].setData(range(0, round_nbr + 1),
+        self.plots[HOSPITALIZED_PLOT].setData(range(0, round_nbr + 1),  # type: ignore
                                               self.diseaseBoard.hospitalized_data)
-        self.plots[QUARANTINED_PLOT].setData(range(0, round_nbr + 1),
+        self.plots[QUARANTINED_PLOT].setData(range(0, round_nbr + 1),  # type: ignore
                                              self.diseaseBoard.quarantined_data)
 
     def goButtonPressed(self) -> None:

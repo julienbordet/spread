@@ -3,9 +3,9 @@
 
 import numpy as np
 from random import random, randrange
-from typing import NewType, Any
+from typing import NewType
 
-BoardState = NewType("BoardState", np.ndarray)
+BoardState = NewType("BoardState", np.ndarray)  # type: ignore
 
 
 # Couleur associée à l'état
