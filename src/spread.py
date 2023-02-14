@@ -537,7 +537,6 @@ if __name__ == '__main__':
         nb_clusters = int(sys.argv[3])
 
     db = DiseaseBoard(board_size, nb_clusters)
-    db.immunity_rate = 0.0
     # Entre 2 et 3 personnes contaminées par malade, si on considère qu'à chaque tour (a peu près un jour), on
     # a l'occasion de contaminer environ 15 personnes, et ce pendant la durée de la contamination, considérée comme
     # égale au délai de rétablissement
